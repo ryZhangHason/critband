@@ -5,7 +5,7 @@ Unit tests for bandwidth calculation functions.
 import numpy as np
 from scipy import integrate
 import pytest
-from critical_bandwidth import silverman_bandwidth, critical_bandwidth, gaussian_kde
+from pola import silverman_bandwidth, critical_bandwidth, gaussian_kde
 
 
 class TestSilvermanBandwidth:

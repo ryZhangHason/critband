@@ -1,6 +1,6 @@
 [project]
-name = "critical-bandwidth"
-version = "0.1.0"
+name = "pola"
+version = "0.0.1"
 authors = [
   { name="Your Name", email="your.email@example.com" }
 ]
@@ -34,14 +34,14 @@ dependencies = [
 "Bug Tracker" = "https://github.com/ryZhangHason/Polarization-CBW/issues"
 
 [project.scripts]
-critical-bandwidth = "critical_bandwidth.cli:main"
+pola = "pola.cli:main"
 
 [build-system]
 requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["critical_bandwidth"]
+packages = ["pola"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
