@@ -5,8 +5,11 @@ Unit tests for bandwidth calculation functions.
 import numpy as np
 from scipy import integrate
 import pytest
-from pola import silverman_bandwidth, critical_bandwidth, gaussian_kde
-from pola.bandwidth import count_modes
+from pola import (silverman_bandwidth, critical_bandwidth, gaussian_kde,
+                   find_trough, detect_components, Component,
+                   BimodalDecomposition)
+from pola.bandwidth import count_modes, _trough_ratio
+from pola.benchmark import BENCHMARK_CASES
 
 
 class TestSilvermanBandwidth:
@@ -235,3 +238,247 @@ class TestGaussianKdeVectorized:
         result = gaussian_kde(x, grid, h)
         integral = np.trapezoid(result, grid)
         assert 0.8 < integral < 1.2
+
+
+class TestTroughRatio:
+    """Test _trough_ratio continuous bimodality measure."""
+
+    def test_trough_ratio_monotonic(self):
+        """Verify _trough_ratio increases monotonically with h."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        h_values = np.linspace(0.5, 3.0, 10)
+        ratios = [_trough_ratio(x, h) for h in h_values]
+        assert all(ratios[i] <= ratios[i + 1] + 1e-10
+                   for i in range(len(ratios) - 1))
+
+    def test_objective_sign_change(self):
+        """Verify f(h_min) < 0 < f(h_max) for bimodal data."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        h_min = silverman_bandwidth(x) / 20
+        h_max = silverman_bandwidth(x) * 10
+        f_min = _trough_ratio(x, h_min) - 0.5
+        f_max = _trough_ratio(x, h_max) - 0.5
+        assert f_min < 0 < f_max
+
+    def test_trough_ratio_small_h(self):
+        """Very small h should produce near-zero trough ratio for bimodal data."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        ratio = _trough_ratio(x, h=0.01)
+        assert ratio < 0.3
+
+    def test_trough_ratio_large_h(self):
+        """Very large h should produce near-1 trough ratio."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        ratio = _trough_ratio(x, h=10.0)
+        assert ratio > 0.5
+
+    def test_trough_ratio_unimodal(self):
+        """Unimodal data should return 1.0."""
+        rng = np.random.default_rng(42)
+        x = rng.normal(0, 1, 500)
+        ratio = _trough_ratio(x, silverman_bandwidth(x))
+        assert ratio == 1.0
+
+    def test_trough_ratio_zero_h(self):
+        """h <= 0 should return 1.0."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        assert _trough_ratio(x, 0.0) == 1.0
+        assert _trough_ratio(x, -1.0) == 1.0
+
+
+class TestCriticalBandwidthHybrid:
+    """Test the upgraded critical_bandwidth with method parameter."""
+
+    def test_brent_matches_binary(self):
+        """Verify brent result matches binary result within tolerance."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        h_binary, ok1 = critical_bandwidth(x, method="binary", tol=1e-8)
+        h_brent, ok2 = critical_bandwidth(x, method="brent", tol=1e-8)
+        assert ok1 and ok2
+        assert abs(h_binary - h_brent) < 0.05
+
+    def test_auto_matches_binary(self):
+        """Verify auto (hybrid) result matches binary."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        h_binary, ok1 = critical_bandwidth(x, method="binary", tol=1e-8)
+        h_auto, ok2 = critical_bandwidth(x, method="auto", tol=1e-8)
+        assert ok1 and ok2
+        assert abs(h_binary - h_auto) < 0.05
+
+    @pytest.mark.parametrize("case_name", list(BENCHMARK_CASES.keys()))
+    def test_benchmark_reference(self, case_name):
+        """Verify critical bandwidth matches expected benchmark values."""
+        case = BENCHMARK_CASES[case_name]
+        x = case.generator(42)
+        h_crit, ok = critical_bandwidth(x, method="binary", tol=1e-8, max_iter=500)
+        assert ok, f"{case_name}: did not converge"
+        assert abs(h_crit - case.h_crit_expected) < case.h_crit_tolerance, \
+            f"{case_name}: expected {case.h_crit_expected} ± {case.h_crit_tolerance}, got {h_crit:.6f}"
+
+    def test_backward_compatibility(self):
+        """Verify critical_bandwidth works without method parameter."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        h, ok = critical_bandwidth(x)
+        assert ok
+        assert h > 0
+
+    def test_method_binary_no_method_param(self):
+        """Explicit method='binary' matches default behavior."""
+        np.random.seed(42)
+        x = np.concatenate([
+            np.random.normal(-2, 0.3, 200),
+            np.random.normal(2, 0.3, 200),
+        ])
+        h_default, _ = critical_bandwidth(x)
+        h_binary, _ = critical_bandwidth(x, method="binary")
+        assert h_default == pytest.approx(h_binary, rel=0.01)
+
+    def test_auto_fallback_on_brent_failure(self):
+        """Auto method should fall back if Brent fails."""
+        # Use constant data where Brent may have issues
+        x = np.ones(10) * 5.0
+        h, ok = critical_bandwidth(x, method="auto")
+        assert np.isfinite(h)
+        # ok may be False (already unimodal) but shouldn't crash
+
+
+class TestFindTrough:
+    """Test find_trough function."""
+
+    def test_find_trough_between_modes(self):
+        """Trough should be between the two component means for symmetric mixture."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        h_crit, ok = critical_bandwidth(x)
+        assert ok
+        # Use slightly smaller bandwidth to ensure bimodality
+        trough = find_trough(x, h_crit * 0.9)
+        assert trough is not None
+        # Trough should be near 0 (midpoint between -2 and 2)
+        assert -0.5 < trough < 0.5
+
+    def test_find_trough_unimodal(self):
+        """Unimodal data should return None."""
+        rng = np.random.default_rng(42)
+        x = rng.normal(0, 1, 500)
+        trough = find_trough(x, silverman_bandwidth(x) * 2)
+        assert trough is None
+
+    def test_find_trough_refinement(self):
+        """Both grid and refined trough should find a result with bimodal bandwidth."""
+        rng = np.random.default_rng(42)
+        x = np.concatenate([rng.normal(-2, 0.3, 200), rng.normal(2, 0.3, 200)])
+        h_crit, _ = critical_bandwidth(x)
+        # Use slightly smaller bandwidth to ensure bimodality
+        trough_refined = find_trough(x, h_crit * 0.9, refine=True)
+        trough_grid = find_trough(x, h_crit * 0.9, refine=False)
+        assert trough_refined is not None
+        assert trough_grid is not None
+
+    def test_find_trough_zero_h(self):
+        """h <= 0 should return None."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        assert find_trough(x, 0.0) is None
+        assert find_trough(x, -1.0) is None
+
+    def test_find_trough_multiple_modes(self):
+        """Trimodal data should find a trough — may be between dominant peaks."""
+        x = BENCHMARK_CASES["trimodal"].generator(42)
+        h_crit, ok = critical_bandwidth(x)
+        assert ok
+        # Use slightly smaller bandwidth to ensure bimodality at critical region
+        trough = find_trough(x, h_crit * 0.95)
+        if trough is not None:
+            # Trough between the two most prominent peaks
+            assert isinstance(trough, float)
+            assert np.isfinite(trough)
+
+
+class TestDetectComponents:
+    """Test bimodal component detection."""
+
+    def check_means(self, result, expected_1, expected_2, tol=0.5):
+        """Helper: verify component means match expected values."""
+        assert abs(result.component1.mean - expected_1) < tol, \
+            f"Expected mean1 ≈ {expected_1}, got {result.component1.mean:.3f}"
+        assert abs(result.component2.mean - expected_2) < tol, \
+            f"Expected mean2 ≈ {expected_2}, got {result.component2.mean:.3f}"
+
+    def check_weight_sum(self, result):
+        """Helper: verify weights sum to ~1."""
+        assert abs(result.component1.weight + result.component2.weight - 1.0) < 0.01
+
+    def test_well_separated(self):
+        """Well-separated symmetric case: means near -2 and +2."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        result = detect_components(x)
+        self.check_means(result, -2.0, 2.0, tol=0.4)
+        self.check_weight_sum(result)
+        assert result.component1.mean < result.component2.mean
+        assert result.dip_ratio < 1.0  # some trough exists
+        assert result.dip_ratio > 0.0
+        assert result.critical_bandwidth > 0
+
+    def test_moderate_separation(self):
+        """Moderate separation: means near -1 and +1.5."""
+        x = BENCHMARK_CASES["moderate_separation"].generator(42)
+        result = detect_components(x)
+        self.check_means(result, -1.0, 1.5, tol=0.5)
+        self.check_weight_sum(result)
+
+    def test_unequal_variance(self):
+        """Unequal variance: left wider (σ=0.6) than right (σ=0.2)."""
+        x = BENCHMARK_CASES["unequal_variance"].generator(42)
+        result = detect_components(x)
+        assert result.component2.std < result.component1.std, \
+            "Right (tight) component should have smaller std"
+        self.check_weight_sum(result)
+
+    def test_unequal_weights(self):
+        """Unequal weights: left 100, right 400 → weight ratio ~1:4."""
+        x = BENCHMARK_CASES["unequal_weights"].generator(42)
+        result = detect_components(x)
+        # Right component has ~4x the data
+        assert result.component2.weight > result.component1.weight, \
+            "Right component should have larger weight"
+        # Weight ratio should be approximately 100:400 = 0.2:0.8
+        weight_ratio = result.component2.weight / result.component1.weight
+        assert 2.0 < weight_ratio < 6.0, \
+            f"Weight ratio {weight_ratio:.2f} outside expected range [2, 6]"
+        self.check_weight_sum(result)
+
+    def test_components_ordered(self):
+        """Component 1 always has lower mean than component 2."""
+        x = BENCHMARK_CASES["extreme_separation"].generator(42)
+        result = detect_components(x)
+        assert result.component1.mean < result.component2.mean
+        # Verify peak locations match
+        assert result.separation_point > result.component1.mean
+        assert result.separation_point < result.component2.mean
+
+    def test_not_bimodal_raises(self):
+        """Unimodal data should raise ValueError."""
+        x = np.array([0.0])
+        with pytest.raises(ValueError, match="not appear bimodal"):
+            detect_components(x)
+
+    def test_constant_data_raises(self):
+        """Constant data should raise ValueError (single peak)."""
+        x = np.ones(20)
+        with pytest.raises(ValueError, match="not appear bimodal|empty component"):
+            detect_components(x)
+
+    def test_std_positive(self):
+        """Component standard deviations should be positive."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        result = detect_components(x)
+        assert result.component1.std > 0
+        assert result.component2.std > 0
+
+    def test_varying_h_factor(self):
+        """Different h_factor values should produce similar results."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        r1 = detect_components(x, h_factor=0.80)
+        r2 = detect_components(x, h_factor=0.90)
+        # Both should detect means near -2 and +2
+        assert abs(r1.component1.mean - r2.component1.mean) < 0.3
+        assert abs(r1.component2.mean - r2.component2.mean) < 0.3
