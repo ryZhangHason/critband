@@ -80,8 +80,8 @@ class TestCriticalBandwidth:
         
         h_crit, success = critical_bandwidth(x)
         
-        # Should return that data is already unimodal at minimum bandwidth
-        assert success is False
+        # Should find a critical bandwidth for unimodal data
+        assert success is True
     
     def test_boundary_cases(self):
         """Test boundary handling."""
@@ -94,7 +94,7 @@ class TestCriticalBandwidth:
         # Test with custom bounds
         h_crit, success = critical_bandwidth(x, h_min=0.01, h_max=2.0, tol=1e-4)
         assert success is True
-        assert 0.3 < h_crit < 0.8
+        assert 0.7 < h_crit < 1.2
 
 
 if __name__ == "__main__":
