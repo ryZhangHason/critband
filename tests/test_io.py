@@ -7,18 +7,17 @@ shared utilities, and web-ready read_buffer.
 
 import io
 import json
-import tempfile
 
 import numpy as np
 import pytest
 
-from pola.io import read_data, read_buffer, DataReadError
-from pola.io._common import try_parse_float, is_numerical_column, filter_numerical_columns
-
+from pola.io import DataReadError, read_buffer, read_data
+from pola.io._common import filter_numerical_columns, is_numerical_column, try_parse_float
 
 # ============================================================================
 # Shared utilities
 # ============================================================================
+
 
 class TestTryParseFloat:
     def test_valid_numbers(self):
@@ -60,6 +59,7 @@ class TestFilterNumericalColumns:
 # ============================================================================
 # CSV adapter
 # ============================================================================
+
 
 class TestCsvAdapter:
     def test_simple_csv(self, tmp_path):
@@ -105,6 +105,7 @@ class TestCsvAdapter:
 # TXT adapter
 # ============================================================================
 
+
 class TestTxtAdapter:
     def test_tsv(self, tmp_path):
         p = tmp_path / "test.tsv"
@@ -122,6 +123,7 @@ class TestTxtAdapter:
 # ============================================================================
 # JSON adapter
 # ============================================================================
+
 
 class TestJsonAdapter:
     def test_list_of_records(self, tmp_path):
@@ -154,6 +156,7 @@ class TestJsonAdapter:
 # Markdown adapter
 # ============================================================================
 
+
 class TestMarkdownAdapter:
     def test_simple_table(self, tmp_path):
         p = tmp_path / "test.md"
@@ -178,9 +181,11 @@ class TestMarkdownAdapter:
 # XLSX adapter
 # ============================================================================
 
+
 class TestXlsxAdapter:
     def test_simple_xlsx(self, tmp_path):
         import openpyxl
+
         p = tmp_path / "test.xlsx"
         wb = openpyxl.Workbook()
         ws = wb.active
@@ -194,19 +199,25 @@ class TestXlsxAdapter:
 
     def test_multi_sheet(self, tmp_path):
         import openpyxl
+
         p = tmp_path / "test.xlsx"
         wb = openpyxl.Workbook()
         ws1 = wb.active
         ws1.title = "Sheet1"
-        ws1.append(["a"]); ws1.append([1]); ws1.append([2])
+        ws1.append(["a"])
+        ws1.append([1])
+        ws1.append([2])
         ws2 = wb.create_sheet("Sheet2")
-        ws2.append(["b"]); ws2.append([3]); ws2.append([4])
+        ws2.append(["b"])
+        ws2.append([3])
+        ws2.append([4])
         wb.save(str(p))
         x = read_data(str(p), sheet="Sheet2")
         np.testing.assert_array_equal(x, [3.0, 4.0])
 
     def test_return_all(self, tmp_path):
         import openpyxl
+
         p = tmp_path / "test.xlsx"
         wb = openpyxl.Workbook()
         ws = wb.active
@@ -222,19 +233,23 @@ class TestXlsxAdapter:
 # XLS adapter
 # ============================================================================
 
+
 class TestXlsAdapter:
     def test_simple_xls(self, tmp_path):
-        import xlrd
         # xlrd 2.x only reads .xls (not .xlsx)
         p = tmp_path / "test.xls"
         # Create .xls using xlwt (if available) or skip
         pytest.importorskip("xlwt")
         import xlwt
+
         wb = xlwt.Workbook()
         ws = wb.add_sheet("Data")
-        ws.write(0, 0, "x"); ws.write(0, 1, "y")
-        ws.write(1, 0, 1.0); ws.write(1, 1, 2.0)
-        ws.write(2, 0, 3.0); ws.write(2, 1, 4.0)
+        ws.write(0, 0, "x")
+        ws.write(0, 1, "y")
+        ws.write(1, 0, 1.0)
+        ws.write(1, 1, 2.0)
+        ws.write(2, 0, 3.0)
+        ws.write(2, 1, 4.0)
         wb.save(str(p))
         x = read_data(str(p))
         np.testing.assert_array_equal(x, [1.0, 3.0])
@@ -244,9 +259,11 @@ class TestXlsAdapter:
 # DOCX adapter
 # ============================================================================
 
+
 class TestDocxAdapter:
     def test_simple_docx(self, tmp_path):
         import docx
+
         p = tmp_path / "test.docx"
         doc = docx.Document()
         table = doc.add_table(rows=3, cols=2)
@@ -262,6 +279,7 @@ class TestDocxAdapter:
 
     def test_no_tables(self, tmp_path):
         import docx
+
         p = tmp_path / "test.docx"
         doc = docx.Document()
         doc.add_paragraph("No tables here")
@@ -273,6 +291,7 @@ class TestDocxAdapter:
 # ============================================================================
 # HTML adapter
 # ============================================================================
+
 
 class TestHtmlAdapter:
     def test_simple_table(self, tmp_path):
@@ -299,33 +318,38 @@ class TestHtmlAdapter:
 # PDF adapter
 # ============================================================================
 
+
 class TestPdfAdapter:
     def test_simple_pdf(self, tmp_path):
         # Create minimal PDF with a table using reportlab
         pytest.importorskip("reportlab")
+        from reportlab.lib import colors
         from reportlab.lib.pagesizes import letter
         from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
-        from reportlab.lib import colors
 
         p = tmp_path / "test.pdf"
         doc = SimpleDocTemplate(str(p), pagesize=letter)
         data = [["x", "y"], ["1", "2"], ["3", "4"]]
         t = Table(data)
-        t.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-            ("FONTSIZE", (0, 0), (-1, 0), 12),
-            ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
-        ]))
+        t.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                    ("FONTSIZE", (0, 0), (-1, 0), 12),
+                    ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                ]
+            )
+        )
         doc.build([t])
         x = read_data(str(p))
         np.testing.assert_array_equal(x, [1.0, 3.0])
 
     def test_no_table_pdf(self, tmp_path):
         pytest.importorskip("reportlab")
-        from reportlab.platypus import SimpleDocTemplate, Paragraph
         from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.platypus import Paragraph, SimpleDocTemplate
 
         p = tmp_path / "test.pdf"
         doc = SimpleDocTemplate(str(p))
@@ -338,6 +362,7 @@ class TestPdfAdapter:
 # ============================================================================
 # read_buffer (web readiness)
 # ============================================================================
+
 
 class TestReadBuffer:
     def test_csv_buffer(self):
@@ -371,6 +396,7 @@ class TestReadBuffer:
 # ============================================================================
 # Error handling
 # ============================================================================
+
 
 class TestErrorHandling:
     def test_file_not_found(self):

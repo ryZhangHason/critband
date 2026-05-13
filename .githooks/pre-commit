@@ -1,0 +1,35 @@
+#!/bin/bash
+# Git pre-commit hook: run ruff lint + format check via uv
+# Installed via: git config core.hooksPath .githooks
+
+set -e
+
+echo "=== Running ruff check ==="
+uv run ruff check .
+
+echo "=== Running ruff format check ==="
+uv run ruff format --check .
+
+echo "=== Running end-of-file fixer ==="
+uv run python -c "
+import os, sys
+issues = []
+for root, dirs, files in os.walk('.'):
+    dirs[:] = [d for d in dirs if d.startswith('.') or d == '__pycache__' or d == '.venv']
+    for f in files:
+        if f.endswith(('.py', '.toml', '.yaml', '.yml', '.json', '.md', '.txt', '.cfg', '.ini')):
+            path = os.path.join(root, f)
+            try:
+                with open(path, 'rb') as fh:
+                    data = fh.read()
+                if data and data[-1] != ord(b'\n'):
+                    issues.append(path)
+            except: pass
+if issues:
+    for p in issues:
+        print(f'[FIX] {p}: missing trailing newline')
+        with open(p, 'ab') as fh:
+            fh.write(b'\n')
+    sys.exit(0)
+print('All files end with newline')
+"

@@ -3,37 +3,42 @@ Unit tests for bandwidth calculation functions.
 """
 
 import numpy as np
-from scipy import integrate
 import pytest
-from pola import (silverman_bandwidth, critical_bandwidth, gaussian_kde,
-                   find_trough, detect_components, Component,
-                   BimodalDecomposition)
-from pola.bandwidth import count_modes, _trough_ratio
+from scipy import integrate
+
+from pola import (
+    critical_bandwidth,
+    detect_components,
+    find_trough,
+    gaussian_kde,
+    silverman_bandwidth,
+)
+from pola.bandwidth import _trough_ratio, count_modes
 from pola.benchmark import BENCHMARK_CASES
 
 
 class TestSilvermanBandwidth:
     """Test Silverman's rule of thumb bandwidth calculation."""
-    
+
     def test_normal_distribution(self):
         """Test bandwidth for standard normal distribution."""
         np.random.seed(42)
         x = np.random.normal(0, 1, 1000)
         h = silverman_bandwidth(x)
-        
+
         # Should be close to optimal bandwidth for normal (≈ 0.26 for n=1000)
         assert 0.2 < h < 0.35
-    
+
     def test_bimodal_distribution(self):
         """Test bandwidth for bimodal distribution."""
         np.random.seed(42)
         x1 = np.random.normal(-2, 0.5, 500)
         x2 = np.random.normal(2, 0.5, 500)
         x = np.concatenate([x1, x2])
-        
+
         h = silverman_bandwidth(x)
         assert h > 0
-    
+
     def test_single_point(self):
         """Test edge case with single data point."""
         x = np.array([5.0])
@@ -43,16 +48,16 @@ class TestSilvermanBandwidth:
 
 class TestGaussianKDE:
     """Test Gaussian kernel density estimation."""
-    
+
     def test_kde_values(self):
         """Test KDE returns valid probability density values."""
         np.random.seed(42)
         x = np.random.normal(0, 1, 100)
         grid = np.linspace(-3, 3, 100)
         h = 0.5
-        
+
         kde_vals = gaussian_kde(x, grid, h)
-        
+
         assert len(kde_vals) == len(grid)
         assert np.all(kde_vals >= 0)
         # Integral should be approximately 1
@@ -62,7 +67,7 @@ class TestGaussianKDE:
 
 class TestCriticalBandwidth:
     """Test critical bandwidth detection algorithm."""
-    
+
     def test_known_bimodal_case(self):
         """Test critical bandwidth for known bimodal distribution."""
         np.random.seed(42)
@@ -70,31 +75,28 @@ class TestCriticalBandwidth:
         x1 = np.random.normal(-2, 0.3, 200)
         x2 = np.random.normal(2, 0.3, 200)
         x = np.concatenate([x1, x2])
-        
+
         h_crit, success = critical_bandwidth(x)
-        
+
         assert success is True
         assert h_crit > 0.2
         assert h_crit < 2.0
-    
+
     def test_unimodal_distribution(self):
         """Test critical bandwidth for already unimodal data."""
         np.random.seed(42)
         x = np.random.normal(0, 1, 500)
-        
+
         h_crit, success = critical_bandwidth(x)
-        
+
         # Should find a critical bandwidth for unimodal data
         assert success is True
-    
+
     def test_boundary_cases(self):
         """Test boundary handling."""
         np.random.seed(42)
-        x = np.concatenate([
-            np.random.normal(-1, 0.2, 100),
-            np.random.normal(1, 0.2, 100)
-        ])
-        
+        x = np.concatenate([np.random.normal(-1, 0.2, 100), np.random.normal(1, 0.2, 100)])
+
         # Test with custom bounds
         h_crit, success = critical_bandwidth(x, h_min=0.01, h_max=2.0, tol=1e-4)
         assert success is True
@@ -180,10 +182,12 @@ class TestStability:
 
     def test_small_perturbation(self):
         np.random.seed(42)
-        x = np.concatenate([
-            np.random.normal(-2, 0.3, 200),
-            np.random.normal(2, 0.3, 200),
-        ])
+        x = np.concatenate(
+            [
+                np.random.normal(-2, 0.3, 200),
+                np.random.normal(2, 0.3, 200),
+            ]
+        )
         h1, _ = critical_bandwidth(x)
         x_noisy = x + np.random.normal(0, 1e-6, len(x))
         h2, _ = critical_bandwidth(x_noisy)
@@ -191,10 +195,12 @@ class TestStability:
 
     def test_tolerance_does_not_harm_convergence(self):
         np.random.seed(42)
-        x = np.concatenate([
-            np.random.normal(-2, 0.3, 200),
-            np.random.normal(2, 0.3, 200),
-        ])
+        x = np.concatenate(
+            [
+                np.random.normal(-2, 0.3, 200),
+                np.random.normal(2, 0.3, 200),
+            ]
+        )
         h_coarse, s1 = critical_bandwidth(x, tol=1e-2)
         h_fine, s2 = critical_bandwidth(x, tol=1e-6)
         assert s1 is True and s2 is True
@@ -215,11 +221,12 @@ class TestGaussianKdeVectorized:
         result = gaussian_kde(x, grid, h)
 
         # Reference: explicit loop (same formula as original implementation)
-        expected = np.array([
-            np.sum(np.exp(-(xi - x)**2 / (2 * h**2)))
-            / (len(x) * h * np.sqrt(2 * np.pi))
-            for xi in grid
-        ])
+        expected = np.array(
+            [
+                np.sum(np.exp(-((xi - x) ** 2) / (2 * h**2))) / (len(x) * h * np.sqrt(2 * np.pi))
+                for xi in grid
+            ]
+        )
         np.testing.assert_array_almost_equal(result, expected)
 
     def test_small_dataset(self):
@@ -248,8 +255,7 @@ class TestTroughRatio:
         x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
         h_values = np.linspace(0.5, 3.0, 10)
         ratios = [_trough_ratio(x, h) for h in h_values]
-        assert all(ratios[i] <= ratios[i + 1] + 1e-10
-                   for i in range(len(ratios) - 1))
+        assert all(ratios[i] <= ratios[i + 1] + 1e-10 for i in range(len(ratios) - 1))
 
     def test_objective_sign_change(self):
         """Verify f(h_min) < 0 < f(h_max) for bimodal data."""
@@ -312,8 +318,9 @@ class TestCriticalBandwidthHybrid:
         x = case.generator(42)
         h_crit, ok = critical_bandwidth(x, method="binary", tol=1e-8, max_iter=500)
         assert ok, f"{case_name}: did not converge"
-        assert abs(h_crit - case.h_crit_expected) < case.h_crit_tolerance, \
-            f"{case_name}: expected {case.h_crit_expected} ± {case.h_crit_tolerance}, got {h_crit:.6f}"
+        assert abs(h_crit - case.h_crit_expected) < case.h_crit_tolerance, (
+            f"{case_name}: {case.h_crit_expected}±{case.h_crit_tolerance}, got {h_crit:.6f}"
+        )
 
     def test_backward_compatibility(self):
         """Verify critical_bandwidth works without method parameter."""
@@ -325,10 +332,12 @@ class TestCriticalBandwidthHybrid:
     def test_method_binary_no_method_param(self):
         """Explicit method='binary' matches default behavior."""
         np.random.seed(42)
-        x = np.concatenate([
-            np.random.normal(-2, 0.3, 200),
-            np.random.normal(2, 0.3, 200),
-        ])
+        x = np.concatenate(
+            [
+                np.random.normal(-2, 0.3, 200),
+                np.random.normal(2, 0.3, 200),
+            ]
+        )
         h_default, _ = critical_bandwidth(x)
         h_binary, _ = critical_bandwidth(x, method="binary")
         assert h_default == pytest.approx(h_binary, rel=0.01)
@@ -398,10 +407,12 @@ class TestDetectComponents:
 
     def check_means(self, result, expected_1, expected_2, tol=0.5):
         """Helper: verify component means match expected values."""
-        assert abs(result.component1.mean - expected_1) < tol, \
+        assert abs(result.component1.mean - expected_1) < tol, (
             f"Expected mean1 ≈ {expected_1}, got {result.component1.mean:.3f}"
-        assert abs(result.component2.mean - expected_2) < tol, \
+        )
+        assert abs(result.component2.mean - expected_2) < tol, (
             f"Expected mean2 ≈ {expected_2}, got {result.component2.mean:.3f}"
+        )
 
     def check_weight_sum(self, result):
         """Helper: verify weights sum to ~1."""
@@ -429,8 +440,9 @@ class TestDetectComponents:
         """Unequal variance: left wider (σ=0.6) than right (σ=0.2)."""
         x = BENCHMARK_CASES["unequal_variance"].generator(42)
         result = detect_components(x)
-        assert result.component2.std < result.component1.std, \
+        assert result.component2.std < result.component1.std, (
             "Right (tight) component should have smaller std"
+        )
         self.check_weight_sum(result)
 
     def test_unequal_weights(self):
@@ -438,12 +450,14 @@ class TestDetectComponents:
         x = BENCHMARK_CASES["unequal_weights"].generator(42)
         result = detect_components(x)
         # Right component has ~4x the data
-        assert result.component2.weight > result.component1.weight, \
+        assert result.component2.weight > result.component1.weight, (
             "Right component should have larger weight"
+        )
         # Weight ratio should be approximately 100:400 = 0.2:0.8
         weight_ratio = result.component2.weight / result.component1.weight
-        assert 2.0 < weight_ratio < 6.0, \
+        assert 2.0 < weight_ratio < 6.0, (
             f"Weight ratio {weight_ratio:.2f} outside expected range [2, 6]"
+        )
         self.check_weight_sum(result)
 
     def test_components_ordered(self):
