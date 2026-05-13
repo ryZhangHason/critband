@@ -65,6 +65,71 @@ class TestGaussianKDE:
         assert 0.8 < integral < 1.2
 
 
+class TestKernelSupport:
+    """Test custom kernel parameter threading through the call chain."""
+
+    def test_builtin_kernels(self):
+        """All built-in kernels produce valid density estimates."""
+        np.random.seed(42)
+        x = np.random.normal(0, 1, 100)
+        grid = np.linspace(-3, 3, 100)
+        h = 0.5
+
+        for kernel in ["gaussian", "epanechnikov", "uniform", "triangular"]:
+            kde_vals = gaussian_kde(x, grid, h, kernel=kernel)
+            assert len(kde_vals) == len(grid)
+            assert np.all(kde_vals >= 0)
+            integral = integrate.trapezoid(kde_vals, grid)
+            assert 0.8 < integral < 1.2, f"Kernel '{kernel}' integral={integral:.3f}"
+
+    def test_custom_callable_kernel(self):
+        """A custom callable works as a kernel."""
+        np.random.seed(42)
+        x = np.random.normal(0, 1, 100)
+        grid = np.linspace(-3, 3, 100)
+        h = 0.5
+
+        def custom_kernel(u):
+            return np.exp(-(u**2) / 2) / np.sqrt(2 * np.pi)
+
+        kde_vals = gaussian_kde(x, grid, h, kernel=custom_kernel)
+        assert np.all(kde_vals >= 0)
+        integral = integrate.trapezoid(kde_vals, grid)
+        assert 0.8 < integral < 1.2
+
+    def test_unknown_kernel_raises(self):
+        """Unknown kernel name raises ValueError."""
+        np.random.seed(42)
+        x = np.random.normal(0, 1, 100)
+        grid = np.linspace(-3, 3, 100)
+        with pytest.raises(ValueError, match="Unknown kernel"):
+            gaussian_kde(x, grid, 0.5, kernel="nonexistent")
+
+    def test_kernel_threads_through_critical_bandwidth(self):
+        """Kernel parameter threads through the full call chain."""
+        np.random.seed(42)
+        x = np.concatenate([np.random.normal(-2, 0.3, 200), np.random.normal(2, 0.3, 200)])
+
+        # Default Gaussian should work
+        h_crit, ok = critical_bandwidth(x)
+        assert ok
+
+        # Epanechnikov should also work (different h_crit expected)
+        h_crit_ep, ok_ep = critical_bandwidth(x, kernel="epanechnikov")
+        assert ok_ep
+        assert 0 < h_crit_ep < 5.0
+
+    def test_kernel_threads_through_find_trough(self):
+        """Kernel parameter threads through find_trough."""
+        np.random.seed(42)
+        x = np.concatenate([np.random.normal(-2, 0.3, 200), np.random.normal(2, 0.3, 200)])
+        h = 1.0
+
+        trough = find_trough(x, h, kernel="epanechnikov")
+        assert trough is not None
+        assert -1 < trough < 1  # trough should be between the two modes
+
+
 class TestCriticalBandwidth:
     """Test critical bandwidth detection algorithm."""
 

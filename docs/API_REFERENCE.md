@@ -25,15 +25,20 @@ h = silverman_bandwidth(x)  # ≈ 0.26
 
 ---
 
-### `gaussian_kde(x, grid, h)`
+### `gaussian_kde(x, grid, h, kernel)`
 
-Gaussian kernel density estimation using vectorized broadcasting.
+Kernel density estimation using vectorized broadcasting.
 
 ```python
-def gaussian_kde(x: np.ndarray, grid: np.ndarray, h: float) -> np.ndarray
+def gaussian_kde(
+    x: np.ndarray,
+    grid: np.ndarray,
+    h: float,
+    kernel: str | callable = "gaussian",
+) -> np.ndarray
 ```
 
-**Parameters:** `x` — 1D input data. `grid` — points where density is evaluated. `h` — bandwidth.
+**Parameters:** `x` — 1D input data. `grid` — points where density is evaluated. `h` — bandwidth. `kernel` — kernel function: built-in options are `"gaussian"` (default), `"epanechnikov"`, `"uniform"`, `"triangular"`. Also accepts a callable `kernel(u: ndarray) -> ndarray`.
 
 **Returns:** np.ndarray — density estimates at each grid point.
 
@@ -41,11 +46,13 @@ def gaussian_kde(x: np.ndarray, grid: np.ndarray, h: float) -> np.ndarray
 ```python
 grid = np.linspace(-3, 3, 100)
 density = gaussian_kde(x, grid, h=0.5)
+density_ep = gaussian_kde(x, grid, h=0.5, kernel="epanechnikov")
+density_custom = gaussian_kde(x, grid, h=0.5, kernel=lambda u: 0.5 * (abs(u) <= 1))
 ```
 
 ---
 
-### `count_modes(x, h, grid_points, prominence)`
+### `count_modes(x, h, grid_points, prominence, kernel)`
 
 Count the number of modes in a kernel density estimate at a given bandwidth.
 
@@ -55,6 +62,7 @@ def count_modes(
     h: float,
     grid_points: int | None = None,
     prominence: float = 0.01,
+    kernel: str | callable = "gaussian",
 ) -> int
 ```
 
@@ -63,12 +71,13 @@ def count_modes(
 - `h` — bandwidth.
 - `grid_points` — evaluation grid resolution (default: adaptive, `min(800, max(200, n//10))`).
 - `prominence` — minimum peak prominence as a fraction of max KDE height (default 0.01).
+- `kernel` — kernel function (default `"gaussian"`). Built-in: `"epanechnikov"`, `"uniform"`, `"triangular"`. Accepts callables.
 
 **Returns:** int — number of detected modes.
 
 ---
 
-### `critical_bandwidth(x, h_min, h_max, tol, max_iter, method)`
+### `critical_bandwidth(x, h_min, h_max, tol, max_iter, method, kernel)`
 
 Calculate the critical bandwidth — the smallest bandwidth where the KDE becomes unimodal.
 
@@ -80,6 +89,7 @@ def critical_bandwidth(
     tol: float = 1e-6,
     max_iter: int = 100,
     method: str = "auto",
+    kernel: str | callable = "gaussian",
 ) -> tuple[float, bool]
 ```
 
@@ -90,6 +100,7 @@ def critical_bandwidth(
 - `tol` — convergence tolerance.
 - `max_iter` — maximum iterations.
 - `method` — search method: `"auto"` (default, hybrid Brent + binary), `"binary"` (pure binary search), `"brent"` (pure Brent).
+- `kernel` — kernel function (default `"gaussian"`). Built-in: `"epanechnikov"`, `"uniform"`, `"triangular"`. Accepts callables.
 
 **Returns:** `(h_crit, success)` — critical bandwidth value and convergence flag.
 
@@ -110,7 +121,7 @@ h_crit, ok = critical_bandwidth(x)
 
 ---
 
-### `find_trough(x, h, grid_points, prominence, refine)`
+### `find_trough(x, h, grid_points, prominence, refine, kernel)`
 
 Find the trough (lowest point) between the two most prominent KDE modes.
 
@@ -121,18 +132,20 @@ def find_trough(
     grid_points: int | None = None,
     prominence: float = 0.01,
     refine: bool = True,
+    kernel: str | callable = "gaussian",
 ) -> float | None
 ```
 
 **Parameters:**
 - `x`, `h`, `grid_points`, `prominence` — same as `count_modes`.
 - `refine` — if True, use quadratic interpolation for sub-grid precision.
+- `kernel` — kernel function (default `"gaussian"`).
 
 **Returns:** x-coordinate of the trough, or None if fewer than 2 peaks detected.
 
 ---
 
-### `detect_components(x, h_factor, grid_points)`
+### `detect_components(x, h_factor, grid_points, kernel)`
 
 Decompose a bimodal distribution into two component Gaussians.
 
@@ -141,6 +154,7 @@ def detect_components(
     x: np.ndarray,
     h_factor: float = 0.85,
     grid_points: int | None = None,
+    kernel: str | callable = "gaussian",
 ) -> BimodalDecomposition
 ```
 
@@ -148,6 +162,7 @@ def detect_components(
 - `x` — 1D input data.
 - `h_factor` — multiplier on critical bandwidth for KDE evaluation (default 0.85). Lower values produce clearer troughs.
 - `grid_points` — KDE grid resolution.
+- `kernel` — kernel function (default `"gaussian"`).
 
 **Returns:** `BimodalDecomposition` — see dataclass below.
 
