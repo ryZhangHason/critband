@@ -310,3 +310,60 @@ Inherits from `ValueError`. Raised by `read_data` and `read_buffer` for:
 | PDF (tables) | `.pdf` | `pdfplumber` | Yes |
 
 All dependencies are declared in `pyproject.toml` and installed automatically with `pip install pola`.
+
+---
+
+## Module: `pola.bootstrap` — Bootstrap Inference
+
+### `bootstrap_critical_bandwidth(x, n_resamples, alpha, random_state, **kwargs)`
+
+Bootstrap confidence interval for the critical bandwidth.
+
+```python
+def bootstrap_critical_bandwidth(
+    x: np.ndarray,
+    n_resamples: int = 999,
+    alpha: float = 0.05,
+    random_state: int | None = None,
+    **kwargs,
+) -> BootstrapResult
+```
+
+**Parameters:**
+- `x` — 1D input data.
+- `n_resamples` — number of bootstrap resamples (default 999).
+- `alpha` — significance level for the confidence interval (default 0.05 → 95% CI).
+- `random_state` — random seed for reproducible resampling.
+- `**kwargs` — passed through to `critical_bandwidth()` (e.g., `method`, `kernel`, `h_min`, `h_max`).
+
+**Returns:** `BootstrapResult` — see dataclass below.
+
+**Example:**
+```python
+from pola import bootstrap_critical_bandwidth
+import numpy as np
+
+x = np.concatenate([np.random.normal(-2, 0.5, 200),
+                    np.random.normal( 2, 0.5, 200)])
+
+result = bootstrap_critical_bandwidth(x, n_resamples=999, random_state=42)
+print(f"h_crit = {result.h_crit:.3f}")
+print(f"95% CI = [{result.ci_lower:.3f}, {result.ci_upper:.3f}]")
+print(f"SE    = {result.standard_error:.3f}")
+```
+
+### `BootstrapResult` (dataclass)
+
+Result of a bootstrap critical bandwidth analysis.
+
+```python
+@dataclass
+class BootstrapResult:
+    h_crit: float             # h_crit on original data
+    ci_lower: float           # lower bound of (1-alpha) percentile CI
+    ci_upper: float           # upper bound of (1-alpha) percentile CI
+    standard_error: float     # bootstrap standard error
+    distribution: np.ndarray  # all n_resamples bootstrap h_crit values
+    n_resamples: int
+    confidence_level: float   # 1 - alpha
+```
