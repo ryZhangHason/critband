@@ -119,6 +119,32 @@ class TestTxtAdapter:
         x = read_data(str(p))
         np.testing.assert_array_equal(x, [1.0, 3.0])
 
+    def test_txt_buffer(self, tmp_path):
+        p = tmp_path / "test.txt"
+        p.write_text("x\n1\n2\n", encoding="utf-8")
+        with open(p, "rb") as f:
+            buf = io.BytesIO(f.read())
+        x = read_buffer(buf, filename="data.txt")
+        np.testing.assert_array_equal(x, [1.0, 2.0])
+
+    def test_txt_pipe_delimiter(self, tmp_path):
+        p = tmp_path / "test.txt"
+        p.write_text("x|y\n1|2\n3|4\n", encoding="utf-8")
+        x = read_data(str(p))
+        np.testing.assert_array_equal(x, [1.0, 3.0])
+
+    def test_txt_comma_delimiter(self, tmp_path):
+        p = tmp_path / "test.txt"
+        p.write_text("x,y\n1,2\n3,4\n", encoding="utf-8")
+        x = read_data(str(p))
+        np.testing.assert_array_equal(x, [1.0, 3.0])
+
+    def test_txt_empty_lines(self, tmp_path):
+        p = tmp_path / "test.txt"
+        p.write_text("\n\n\n", encoding="utf-8")
+        with pytest.raises(DataReadError):
+            read_data(str(p))
+
 
 # ============================================================================
 # JSON adapter
@@ -151,6 +177,29 @@ class TestJsonAdapter:
         with pytest.raises(DataReadError):
             read_data(str(p))
 
+    def test_json_mixed_dict(self, tmp_path):
+        p = tmp_path / "test.json"
+        p.write_text(json.dumps({"numbers": [1, 2, 3], "name": "test"}))
+        cols = read_data(str(p), return_all=True)
+        np.testing.assert_array_equal(cols["Value"], [1.0, 2.0, 3.0])
+
+    def test_empty_json_array(self, tmp_path):
+        p = tmp_path / "test.json"
+        p.write_text("[]")
+        with pytest.raises(DataReadError):
+            read_data(str(p))
+
+    def test_json_non_numerical_list(self, tmp_path):
+        p = tmp_path / "test.json"
+        p.write_text(json.dumps(["foo", "bar"]))
+        with pytest.raises(DataReadError):
+            read_data(str(p))
+
+    def test_json_mixed_dict_buffer(self):
+        buf = io.BytesIO(json.dumps({"a": [1, 2], "b": "x"}).encode("utf-8"))
+        x = read_buffer(buf, filename="data.json")
+        np.testing.assert_array_equal(x, [1.0, 2.0])
+
 
 # ============================================================================
 # Markdown adapter
@@ -175,6 +224,41 @@ class TestMarkdownAdapter:
         p.write_text("## S1\n| X |\n|---|\n| 1 |\n\n## S2\n| Y |\n|---|\n| 2 |\n")
         x = read_data(str(p), sheet=1)
         np.testing.assert_array_equal(x, [2.0])
+
+    def test_markdown_duplicate_labels(self, tmp_path):
+        p = tmp_path / "test.md"
+        p.write_text("## Data\n| X |\n|---|\n| 1 |\n\n## Data\n| Y |\n|---|\n| 2 |\n")
+        cols = read_data(str(p), sheet="Data", return_all=True)
+        np.testing.assert_array_equal(cols["X"], [1.0])
+
+    def test_markdown_no_heading(self, tmp_path):
+        p = tmp_path / "test.md"
+        p.write_text("| A |\n|---|\n| 1 |\n")
+        x = read_data(str(p))
+        np.testing.assert_array_equal(x, [1.0])
+
+    def test_markdown_table_with_text_after(self, tmp_path):
+        p = tmp_path / "test.md"
+        p.write_text("| X |\n|---|\n| 1 |\n\nSome trailing text\n")
+        x = read_data(str(p))
+        np.testing.assert_array_equal(x, [1.0])
+
+    def test_markdown_single_row(self, tmp_path):
+        p = tmp_path / "test.md"
+        p.write_text("| X |\n")
+        with pytest.raises(DataReadError):
+            read_data(str(p))
+
+    def test_markdown_buffer_no_heading(self):
+        buf = io.BytesIO("| A |\n|---|\n| 1 |\n".encode("utf-8"))
+        x = read_buffer(buf, filename="data.md")
+        np.testing.assert_array_equal(x, [1.0])
+
+    def test_markdown_empty(self, tmp_path):
+        p = tmp_path / "test.md"
+        p.write_text("", encoding="utf-8")
+        with pytest.raises(DataReadError):
+            read_data(str(p))
 
 
 # ============================================================================
@@ -228,6 +312,81 @@ class TestXlsxAdapter:
         cols = read_data(str(p), return_all=True)
         np.testing.assert_array_equal(cols["a"], [1.0, 3.0])
 
+    def test_xlsx_buffer(self, tmp_path):
+        import openpyxl
+
+        p = tmp_path / "test.xlsx"
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(["x"])
+        ws.append([1.0])
+        ws.append([2.0])
+        wb.save(str(p))
+        with open(p, "rb") as f:
+            buf = io.BytesIO(f.read())
+        x = read_buffer(buf, filename="data.xlsx")
+        np.testing.assert_array_equal(x, [1.0, 2.0])
+
+    def test_empty_sheet(self, tmp_path):
+        import openpyxl
+
+        p = tmp_path / "test.xlsx"
+        wb = openpyxl.Workbook()
+        ws1 = wb.active
+        ws1.title = "Data"
+        ws1.append(["x"])
+        ws1.append([1])
+        ws1.append([2])
+        wb.create_sheet("Empty")
+        wb.save(str(p))
+        x = read_data(str(p))
+        np.testing.assert_array_equal(x, [1.0, 2.0])
+
+    def test_none_row(self, tmp_path):
+        import openpyxl
+
+        p = tmp_path / "test.xlsx"
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(["x"])
+        ws.append([1.0])
+        ws.append([2.0])
+        ws.append([3.0])
+        ws.append([4.0])
+        ws.append([None])
+        wb.save(str(p))
+        # None-valued cells produce None in column; numerical threshold handles it
+        x = read_data(str(p))
+        assert len(x) == 5
+        assert np.isnan(x[-1])
+
+    def test_string_cells(self, tmp_path):
+        import openpyxl
+
+        p = tmp_path / "test.xlsx"
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(["x"])
+        ws.append(["3.14"])
+        ws.append(["2.71"])
+        wb.save(str(p))
+        x = read_data(str(p))
+        np.testing.assert_array_almost_equal(x, [3.14, 2.71])
+
+    def test_non_convertible_cell(self, tmp_path):
+        from datetime import datetime
+
+        import openpyxl
+
+        p = tmp_path / "test.xlsx"
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(["x"])
+        ws.append([datetime(2024, 1, 1)])
+        wb.save(str(p))
+        with pytest.raises(DataReadError):
+            read_data(str(p))
+
 
 # ============================================================================
 # XLS adapter
@@ -253,6 +412,80 @@ class TestXlsAdapter:
         wb.save(str(p))
         x = read_data(str(p))
         np.testing.assert_array_equal(x, [1.0, 3.0])
+
+    def test_xls_buffer(self, tmp_path):
+        pytest.importorskip("xlwt")
+        import xlwt
+
+        p = tmp_path / "test.xls"
+        wb = xlwt.Workbook()
+        ws = wb.add_sheet("Data")
+        ws.write(0, 0, "x")
+        ws.write(1, 0, 1.0)
+        ws.write(2, 0, 2.0)
+        wb.save(str(p))
+        with open(p, "rb") as f:
+            buf = io.BytesIO(f.read())
+        x = read_buffer(buf, filename="data.xls")
+        np.testing.assert_array_equal(x, [1.0, 2.0])
+
+    def test_xls_empty_cell(self, tmp_path):
+        pytest.importorskip("xlwt")
+        import xlwt
+
+        p = tmp_path / "test.xls"
+        wb = xlwt.Workbook()
+        ws = wb.add_sheet("Data")
+        ws.write(0, 0, "x")
+        ws.write(1, 0, 1.0)
+        ws.write(2, 0, 2.0)
+        ws.write(3, 0, 3.0)
+        ws.write(4, 0, 4.0)
+        ws.write(5, 1, 0)  # creates row 5; col 0 stays XL_CELL_EMPTY
+        wb.save(str(p))
+        x = read_data(str(p))
+        assert len(x) == 5
+        assert np.isnan(x[-1])
+
+    def test_xls_text_cell(self, tmp_path):
+        pytest.importorskip("xlwt")
+        import xlwt
+
+        p = tmp_path / "test.xls"
+        wb = xlwt.Workbook()
+        ws = wb.add_sheet("Data")
+        ws.write(0, 0, "x")
+        ws.write(1, 0, "3.14")
+        wb.save(str(p))
+        x = read_data(str(p))
+        np.testing.assert_array_almost_equal(x, [3.14])
+
+    def test_xls_empty_sheet(self, tmp_path):
+        pytest.importorskip("xlwt")
+        import xlwt
+
+        p = tmp_path / "test.xls"
+        wb = xlwt.Workbook()
+        ws1 = wb.add_sheet("Data")
+        ws1.write(0, 0, "x")
+        ws1.write(1, 0, 1.0)
+        wb.add_sheet("Empty")
+        wb.save(str(p))
+        x = read_data(str(p))
+        np.testing.assert_array_equal(x, [1.0])
+
+    def test_xls_blank_headers(self, tmp_path):
+        pytest.importorskip("xlwt")
+        import xlwt
+
+        p = tmp_path / "test.xls"
+        wb = xlwt.Workbook()
+        ws = wb.add_sheet("Data")
+        ws.write(0, 0, "")
+        ws.write(1, 0, 1.5)
+        wb.save(str(p))
+        x = read_data(str(p))
+        np.testing.assert_array_equal(x, [1.5])
 
 
 # ============================================================================
@@ -287,6 +520,45 @@ class TestDocxAdapter:
         with pytest.raises(DataReadError):
             read_data(str(p))
 
+    def test_docx_buffer(self, tmp_path):
+        import docx
+
+        p = tmp_path / "test.docx"
+        doc = docx.Document()
+        table = doc.add_table(rows=3, cols=1)
+        table.cell(0, 0).text = "x"
+        table.cell(1, 0).text = "1"
+        table.cell(2, 0).text = "2"
+        doc.save(str(p))
+        with open(p, "rb") as f:
+            buf = io.BytesIO(f.read())
+        x = read_buffer(buf, filename="data.docx")
+        np.testing.assert_array_equal(x, [1.0, 2.0])
+
+    def test_single_row_table(self, tmp_path):
+        import docx
+
+        p = tmp_path / "test.docx"
+        doc = docx.Document()
+        table = doc.add_table(rows=1, cols=1)
+        table.cell(0, 0).text = "x"
+        doc.save(str(p))
+        with pytest.raises(DataReadError):
+            read_data(str(p))
+
+    def test_empty_headers(self, tmp_path):
+        import docx
+
+        p = tmp_path / "test.docx"
+        doc = docx.Document()
+        table = doc.add_table(rows=2, cols=1)
+        table.cell(0, 0).text = ""
+        table.cell(1, 0).text = "1"
+        doc.save(str(p))
+        # Empty header becomes "" key — still stored, triggers automatic column name
+        cols = read_data(str(p), return_all=True)
+        assert any(k == "" for k in cols)
+
 
 # ============================================================================
 # HTML adapter
@@ -313,6 +585,87 @@ class TestHtmlAdapter:
         with pytest.raises(DataReadError):
             read_data(str(p))
 
+    def test_thead_tag(self, tmp_path):
+        p = tmp_path / "test.html"
+        p.write_text(
+            "<html><body><table>"
+            "<thead><tr><th>A</th><th>B</th></tr></thead>"
+            "<tbody><tr><td>1</td><td>2</td></tr></tbody>"
+            "</table></body></html>",
+            encoding="utf-8",
+        )
+        x = read_data(str(p))
+        np.testing.assert_array_equal(x, [1.0])
+
+    def test_caption(self, tmp_path):
+        p = tmp_path / "test.html"
+        p.write_text(
+            "<html><body><table>"
+            "<caption>Data Table</caption>"
+            "<tr><th>X</th></tr>"
+            "<tr><td>42</td></tr>"
+            "</table></body></html>",
+            encoding="utf-8",
+        )
+        x = read_data(str(p))
+        np.testing.assert_array_equal(x, [42.0])
+
+    def test_no_th_auto_headers(self, tmp_path):
+        p = tmp_path / "test.html"
+        p.write_text(
+            "<html><body><table>"
+            "<tr><td>1</td><td>2</td></tr>"
+            "<tr><td>3</td><td>4</td></tr>"
+            "</table></body></html>",
+            encoding="utf-8",
+        )
+        x = read_data(str(p))
+        np.testing.assert_array_equal(x, [1.0, 3.0])
+
+    def test_html_entities(self, tmp_path):
+        p = tmp_path / "test.html"
+        p.write_text(
+            "<html><body><table>"
+            "<tr><th>X</th></tr>"
+            "<tr><td>&amp;test</td></tr>"
+            "</table></body></html>",
+            encoding="utf-8",
+        )
+        with pytest.raises(DataReadError):
+            read_data(str(p))
+
+    def test_charref(self, tmp_path):
+        p = tmp_path / "test.html"
+        p.write_text(
+            "<html><body><table><tr><th>X</th></tr><tr><td>&#65;</td></tr></table></body></html>",
+            encoding="utf-8",
+        )
+        with pytest.raises(DataReadError):
+            read_data(str(p))
+
+    def test_html_buffer(self, tmp_path):
+        p = tmp_path / "test.html"
+        p.write_text(
+            "<html><body><table><tr><th>A</th></tr><tr><td>1</td></tr></table></body></html>",
+            encoding="utf-8",
+        )
+        with open(p, "rb") as f:
+            buf = io.BytesIO(f.read())
+        x = read_buffer(buf, filename="data.html")
+        np.testing.assert_array_equal(x, [1.0])
+
+    def test_duplicate_table_labels(self, tmp_path):
+        p = tmp_path / "test.html"
+        p.write_text(
+            "<html><body>"
+            "<table><caption>Data</caption><tr><th>X</th></tr><tr><td>1</td></tr></table>"
+            "<table><caption>Data</caption><tr><th>Y</th></tr><tr><td>2</td></tr></table>"
+            "</body></html>",
+            encoding="utf-8",
+        )
+        cols = read_data(str(p), return_all=True)
+        assert "X" in cols
+
 
 # ============================================================================
 # PDF adapter
@@ -334,6 +687,7 @@ class TestPdfAdapter:
         t.setStyle(
             TableStyle(
                 [
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
                     ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
                     ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
                     ("ALIGN", (0, 0), (-1, -1), "CENTER"),
@@ -357,6 +711,54 @@ class TestPdfAdapter:
         doc.build([Paragraph("No table here", styles["Normal"])])
         with pytest.raises(DataReadError):
             read_data(str(p))
+
+    def test_pdf_buffer(self, tmp_path):
+        pytest.importorskip("reportlab")
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import letter
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+
+        p = tmp_path / "test.pdf"
+        doc = SimpleDocTemplate(str(p), pagesize=letter)
+        data = [["x"], ["1"], ["2"]]
+        t = Table(data)
+        t.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), 0.5, colors.black)]))
+        doc.build([t])
+        with open(p, "rb") as f:
+            buf = io.BytesIO(f.read())
+        x = read_buffer(buf, filename="data.pdf")
+        np.testing.assert_array_equal(x, [1.0, 2.0])
+
+    def test_pdf_single_row_table(self, tmp_path):
+        pytest.importorskip("reportlab")
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import letter
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+
+        p = tmp_path / "test.pdf"
+        doc = SimpleDocTemplate(str(p), pagesize=letter)
+        data = [["x", "y"]]
+        t = Table(data)
+        t.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), 0.5, colors.black)]))
+        doc.build([t])
+        with pytest.raises(DataReadError):
+            read_data(str(p))
+
+    def test_pdf_blank_headers(self, tmp_path):
+        pytest.importorskip("reportlab")
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import letter
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+
+        p = tmp_path / "test.pdf"
+        doc = SimpleDocTemplate(str(p), pagesize=letter)
+        data = [["", ""], ["1.5", "2.5"]]
+        t = Table(data)
+        t.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), 0.5, colors.black)]))
+        doc.build([t])
+        # Blank cells become auto-named Col1, Col2
+        x = read_data(str(p))
+        np.testing.assert_array_equal(x, [1.5])
 
 
 # ============================================================================
@@ -432,3 +834,16 @@ class TestErrorHandling:
         p.write_text("x\n1\n2\n", encoding="utf-8")
         with pytest.raises(DataReadError, match="not found"):
             read_data(str(p), column="nonexistent")
+
+    def test_nonexistent_sheet_name(self, tmp_path):
+        import openpyxl
+
+        p = tmp_path / "test.xlsx"
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Data"
+        ws.append(["x"])
+        ws.append([1])
+        wb.save(str(p))
+        with pytest.raises(DataReadError, match="not found"):
+            read_data(str(p), sheet="DoesNotExist")
