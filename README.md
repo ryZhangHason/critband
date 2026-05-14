@@ -4,6 +4,8 @@
 
 It finds the smallest bandwidth where a KDE transitions from bimodal to unimodal — a well-established statistical test for modality.
 
+> **Web App**: Try pola in your browser at **[qhwangantoneva.github.io/pola](https://qhwangantoneva.github.io/pola/)** — no installation required. All computation runs in-browser via Pyodide (WebAssembly). Your data never leaves your machine.
+
 ## Quick Start
 
 ```bash
