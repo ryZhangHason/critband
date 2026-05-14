@@ -7,7 +7,7 @@ authors = [
 ]
 description = "Calculate critical bandwidth for bimodal distributions in kernel density estimation"
 readme = "README.md"
-license = "MIT"
+license = "Apache-2.0"
 requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 3 - Alpha",

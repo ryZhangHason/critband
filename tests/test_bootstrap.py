@@ -21,6 +21,7 @@ class TestBootstrapResultDataclass:
             distribution=np.array([0.9, 1.0, 1.1]),
             n_resamples=3,
             confidence_level=0.95,
+            n_failed=0,
         )
         assert result.h_crit == 1.0
         assert result.ci_lower == 0.8
@@ -29,6 +30,7 @@ class TestBootstrapResultDataclass:
         assert len(result.distribution) == 3
         assert result.n_resamples == 3
         assert result.confidence_level == 0.95
+        assert result.n_failed == 0
 
 
 class TestBootstrapCriticalBandwidth:

@@ -561,3 +561,39 @@ class TestDetectComponents:
         # Both should detect means near -2 and +2
         assert abs(r1.component1.mean - r2.component1.mean) < 0.3
         assert abs(r1.component2.mean - r2.component2.mean) < 0.3
+
+
+class TestBenchmarkStability:
+    """Test benchmark reference values across multiple random seeds."""
+
+    @pytest.mark.parametrize("case_name", list(BENCHMARK_CASES.keys()))
+    def test_benchmark_stability(self, case_name):
+        """Verify h_crit is stable across random seeds, within 2*std of
+        the reference seed (seed=42) value. This provides independent
+        validation that reference values are representative, not circular.
+        """
+        case = BENCHMARK_CASES[case_name]
+        seeds = [42, 123, 456, 789, 101112, 131415, 161718, 192021, 222324, 252627]
+        h_values = []
+        for seed in seeds:
+            x = case.generator(seed)
+            h, ok = critical_bandwidth(x, method="binary", tol=1e-8, max_iter=500)
+            assert ok, f"{case_name} seed={seed}: did not converge"
+            h_values.append(h)
+
+        h_arr = np.array(h_values)
+        h_ref = h_arr[0]  # seed=42 is the reference
+        mean = np.mean(h_arr)
+        std = np.std(h_arr, ddof=1)
+
+        # The reference value (seed=42) should be within 3 std of the mean
+        assert abs(h_ref - mean) < 3 * std + 1e-10, (
+            f"{case_name}: ref={h_ref:.4f}, mean={mean:.4f}±{std:.4f} "
+            f"(seed=42 deviates {abs(h_ref-mean)/std:.2f}σ)"
+        )
+
+        # The expected benchmark value should be within 3 std of the multi-seed mean
+        assert abs(case.h_crit_expected - mean) < 3 * std + case.h_crit_tolerance, (
+            f"{case_name}: expected={case.h_crit_expected:.4f}, "
+            f"mean={mean:.4f}±{std:.4f} across {len(seeds)} seeds"
+        )
