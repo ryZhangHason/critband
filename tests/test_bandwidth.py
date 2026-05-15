@@ -707,3 +707,48 @@ class TestBenchmarkStability:
             f"{case_name}: expected={case.h_crit_expected:.4f}, "
             f"mean={mean:.4f}±{std:.4f} across {len(seeds)} seeds"
         )
+
+
+class TestKdeGridPoints:
+    """Test adaptive KDE grid point calculation."""
+
+    def test_small_h_fine_grid(self):
+        """Small h relative to range should produce fine grid."""
+        from pola.bandwidth import _kde_grid_points
+
+        result = _kde_grid_points(100, h=0.01, data_range=10)
+        # base=200, ratio=250, scale=3.0, points=600
+        assert result == 600, f"Expected 600, got {result}"
+
+    def test_large_h_coarse_grid(self):
+        """Large h relative to range should produce coarse grid (near min_grid)."""
+        from pola.bandwidth import _kde_grid_points
+
+        result = _kde_grid_points(100, h=10.0, data_range=10)
+        # base=200, ratio=0.25, scale=0.5, points=100 → clamped to 200
+        assert result == 200, f"Expected 200 (min_grid), got {result}"
+
+    def test_no_h_backward_compatible(self):
+        """Without h param, should return original n//10 clamped."""
+        from pola.bandwidth import _kde_grid_points
+
+        assert _kde_grid_points(100) == 200  # min_grid
+        assert _kde_grid_points(5000) == 500  # 5000//10 = 500
+        assert _kde_grid_points(500) == 200  # 500//10 = 50 < 200
+        assert _kde_grid_points(3000) == 300  # 3000//10 = 300
+
+    def test_large_h_coarse_big_n(self):
+        """Large h with large n should reduce grid below size-derived value."""
+        from pola.bandwidth import _kde_grid_points
+
+        result = _kde_grid_points(5000, h=10.0, data_range=10)
+        # base=500, ratio=0.25, scale=0.5, points=250
+        assert result == 250, f"Expected 250, got {result}"
+
+    def test_small_h_fine_big_n(self):
+        """Small h with big n should hit max_grid."""
+        from pola.bandwidth import _kde_grid_points
+
+        result = _kde_grid_points(5000, h=0.01, data_range=10)
+        # base=500, ratio=250, scale=3.0, points=1500 → clamped to 800
+        assert result == 800, f"Expected 800 (max_grid), got {result}"
