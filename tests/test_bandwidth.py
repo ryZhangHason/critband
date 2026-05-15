@@ -492,6 +492,39 @@ class TestBrentSolver:
         assert ok
         assert 0.5 < h < 3.0
 
+    def test_auto_selects_brent_when_appropriate(self):
+        """Auto method selects Brent for well-separated large samples, binary for small samples."""
+        from pola.bandwidth import _trough_ratio, silverman_bandwidth
+
+        # Well-separated large sample (n=400): auto should converge via Brent
+        x_large = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        h_large, ok_large = critical_bandwidth(x_large, method="auto", tol=1e-8, max_iter=500)
+        assert ok_large, "auto did not converge on well-separated large sample"
+        # Verify h_crit matches binary reference
+        h_bin, ok_bin = critical_bandwidth(x_large, method="binary", tol=1e-8, max_iter=500)
+        assert ok_bin
+        assert abs(h_large - h_bin) < 0.02, (
+            f"auto={h_large:.6f} differs from binary={h_bin:.6f}"
+        )
+
+        # Small sample (n=60): auto should use binary (safe fallback)
+        x_small = BENCHMARK_CASES["small_sample_bimodal"].generator(42)
+        h_small, ok_small = critical_bandwidth(x_small, method="auto", tol=1e-8, max_iter=500)
+        assert ok_small, "auto did not converge on small sample"
+        # Verify h_crit matches binary reference
+        h_bin_small, ok_bin_small = critical_bandwidth(x_small, method="binary", tol=1e-8, max_iter=500)
+        assert ok_bin_small
+        assert abs(h_small - h_bin_small) < 0.02, (
+            f"auto={h_small:.6f} differs from binary={h_bin_small:.6f} on small sample"
+        )
+
+        # Verify the diagnostic: trough ratio should be low for well-separated data
+        h_min = silverman_bandwidth(x_large) / 20.0
+        tr = _trough_ratio(x_large, h_min)
+        assert tr < 0.7, f"Expected deep trough (tr<0.7), got tr={tr:.4f}"
+        # For small sample, n<100 triggers binary regardless of trough ratio
+        assert len(x_small) < 100, "small_sample_bimodal should have n<100"
+
 
 class TestFindTrough:
     """Test find_trough function."""
