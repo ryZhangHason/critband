@@ -752,3 +752,49 @@ class TestKdeGridPoints:
         result = _kde_grid_points(5000, h=0.01, data_range=10)
         # base=500, ratio=250, scale=3.0, points=1500 → clamped to 800
         assert result == 800, f"Expected 800 (max_grid), got {result}"
+
+
+class TestCriticalBandwidthCI:
+    """Test return_ci=True option."""
+
+    def test_ci_default_not_returned(self):
+        """Default call (return_ci=False) returns 2-tuple."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        result = critical_bandwidth(x)
+        assert isinstance(result, tuple) and len(result) == 2
+
+    def test_ci_returned_with_bounds(self):
+        """return_ci=True returns 5-tuple with valid CI bounds."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        h_crit, ok, ci_low, ci_high, se = critical_bandwidth(x, return_ci=True, ci_resamples=99)
+        assert ok
+        assert ci_low < h_crit < ci_high
+        assert se > 0
+
+    def test_ci_bounds_reasonable(self):
+        """CI should contain the reference value."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        _, _, ci_low, ci_high, se = critical_bandwidth(x, return_ci=True, ci_resamples=99)
+        assert ci_low < 1.86 < ci_high  # reference h_crit for this case
+
+    def test_ci_alpha_99(self):
+        """99% CI should be wider than 90% CI."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        _, _, lo90, hi90, _ = critical_bandwidth(x, return_ci=True, ci_alpha=0.10, ci_resamples=99)
+        _, _, lo99, hi99, _ = critical_bandwidth(x, return_ci=True, ci_alpha=0.01, ci_resamples=99)
+        assert (hi99 - lo99) >= (hi90 - lo90)
+
+    def test_ci_reproducible_random_state(self):
+        """Same random_state produces same CI."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        r1 = critical_bandwidth(x, return_ci=True, ci_random_state=42, ci_resamples=99)
+        r2 = critical_bandwidth(x, return_ci=True, ci_random_state=42, ci_resamples=99)
+        assert r1[2] == r2[2]  # ci_lower
+        assert r1[3] == r2[3]  # ci_upper
+
+    def test_ci_backward_compat(self):
+        """return_ci=False (default) returns same 2-tuple as before."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        h1, ok1 = critical_bandwidth(x)
+        h2, ok2 = critical_bandwidth(x, return_ci=False)
+        assert h1 == h2 and ok1 == ok2
