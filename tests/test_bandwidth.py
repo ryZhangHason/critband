@@ -510,6 +510,7 @@ class TestBrentSolver:
         h_crit, ok = critical_bandwidth(x, method="brent", tol=1e-8, max_iter=100)
         assert ok, f"{case_name}: brent did not converge"
         from pola.bandwidth import count_modes
+
         assert count_modes(x, h_crit) == 1, (
             f"{case_name}: h_crit={h_crit:.6f} has {count_modes(x, h_crit)} modes"
         )
@@ -517,6 +518,7 @@ class TestBrentSolver:
     def test_brent_objective_sign_change(self):
         """_brent_objective returns positive at h_min, negative at h_max."""
         from pola.bandwidth import _brent_objective, silverman_bandwidth
+
         x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
         h_min = silverman_bandwidth(x) / 20.0
         h_max = silverman_bandwidth(x) * 10.0
@@ -528,6 +530,7 @@ class TestBrentSolver:
     def test_brent_objective_zero_h(self):
         """h <= 0 returns positive (bimodal forcing)."""
         from pola.bandwidth import _brent_objective
+
         x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
         assert _brent_objective(0.0, x) > 0
         assert _brent_objective(-1.0, x) > 0
@@ -535,6 +538,7 @@ class TestBrentSolver:
     def test_brent_objective_unimodal_data(self):
         """Unimodal data returns negative at all bandwidths."""
         from pola.bandwidth import _brent_objective, silverman_bandwidth
+
         rng = np.random.default_rng(42)
         x = rng.normal(0, 1, 500)
         h = silverman_bandwidth(x)
@@ -581,16 +585,16 @@ class TestBrentSolver:
         # Verify h_crit matches binary reference
         h_bin, ok_bin = critical_bandwidth(x_large, method="binary", tol=1e-8, max_iter=500)
         assert ok_bin
-        assert abs(h_large - h_bin) < 0.02, (
-            f"auto={h_large:.6f} differs from binary={h_bin:.6f}"
-        )
+        assert abs(h_large - h_bin) < 0.02, f"auto={h_large:.6f} differs from binary={h_bin:.6f}"
 
         # Small sample (n=60): auto should use binary (safe fallback)
         x_small = BENCHMARK_CASES["small_sample_bimodal"].generator(42)
         h_small, ok_small = critical_bandwidth(x_small, method="auto", tol=1e-8, max_iter=500)
         assert ok_small, "auto did not converge on small sample"
         # Verify h_crit matches binary reference
-        h_bin_small, ok_bin_small = critical_bandwidth(x_small, method="binary", tol=1e-8, max_iter=500)
+        h_bin_small, ok_bin_small = critical_bandwidth(
+            x_small, method="binary", tol=1e-8, max_iter=500
+        )
         assert ok_bin_small
         assert abs(h_small - h_bin_small) < 0.02, (
             f"auto={h_small:.6f} differs from binary={h_bin_small:.6f} on small sample"
@@ -777,7 +781,7 @@ class TestBenchmarkStability:
         # The reference value (seed=42) should be within 3 std of the mean
         assert abs(h_ref - mean) < 3 * std + 1e-10, (
             f"{case_name}: ref={h_ref:.4f}, mean={mean:.4f}±{std:.4f} "
-            f"(seed=42 deviates {abs(h_ref-mean)/std:.2f}σ)"
+            f"(seed=42 deviates {abs(h_ref - mean) / std:.2f}σ)"
         )
 
         # The expected benchmark value should be within 3 std of the multi-seed mean
@@ -927,9 +931,12 @@ class TestDipTest:
         x_unif = rng.uniform(0, 1, 100)
         x_bimod = np.concatenate([rng.normal(-2, 0.3, 100), rng.normal(2, 0.3, 100)])
         from pola.bandwidth import _compute_dip_statistic
+
         dip_unif = _compute_dip_statistic(x_unif)
         dip_bimod = _compute_dip_statistic(x_bimod)
-        assert dip_bimod > dip_unif, f"Expected bimodal dip ({dip_bimod:.4f}) > uniform dip ({dip_unif:.4f})"
+        assert dip_bimod > dip_unif, (
+            f"Expected bimodal dip ({dip_bimod:.4f}) > uniform dip ({dip_unif:.4f})"
+        )
         # p-value should be small (but with n_boot=99, allow leniency)
         result = dip_test(x_bimod, n_boot=99)
         assert result.p_value < 0.5, f"Expected p < 0.5 for bimodal data, got {result.p_value:.3f}"
@@ -1120,9 +1127,7 @@ class TestFindModes:
         assert abs(positions[0] - (-2.0)) < 0.5, (
             f"First mode at {positions[0]:.3f}, expected near -2"
         )
-        assert abs(positions[1] - 2.0) < 0.5, (
-            f"Second mode at {positions[1]:.3f}, expected near 2"
-        )
+        assert abs(positions[1] - 2.0) < 0.5, f"Second mode at {positions[1]:.3f}, expected near 2"
 
     def test_unimodal_modes(self):
         """Normal data should return 1 mode near center."""
@@ -1148,9 +1153,7 @@ class TestFindModes:
         assert abs(positions[0] - (-3.0)) < 0.4, (
             f"Left mode at {positions[0]:.3f}, expected near -3"
         )
-        assert abs(positions[1] - 3.0) < 0.4, (
-            f"Right mode at {positions[1]:.3f}, expected near 3"
-        )
+        assert abs(positions[1] - 3.0) < 0.4, f"Right mode at {positions[1]:.3f}, expected near 3"
 
     def test_trimodal_modes(self):
         """Trimodal data should detect 3 modes."""
@@ -1210,12 +1213,9 @@ class TestFindModes:
             result = find_modes(x, h)
             n = count_modes(x, h)
             assert len(result.modes) == n, (
-                f"h={h}: find_modes has {len(result.modes)} modes, "
-                f"count_modes returns {n}"
+                f"h={h}: find_modes has {len(result.modes)} modes, count_modes returns {n}"
             )
-            assert result.n_modes == n, (
-                f"h={h}: result.n_modes={result.n_modes} != count_modes={n}"
-            )
+            assert result.n_modes == n, f"h={h}: result.n_modes={result.n_modes} != count_modes={n}"
 
     def test_mode_result_dataclass_fields(self):
         """ModeResult should have all expected fields."""
@@ -1331,9 +1331,7 @@ class TestBimodalityStrength:
         h_analysis = h_crit * 0.85
         expected_n = find_modes(x, h_analysis).n_modes
         result = bimodality_strength(x)
-        assert result.n_modes == expected_n, (
-            f"n_modes={result.n_modes} != find_modes={expected_n}"
-        )
+        assert result.n_modes == expected_n, f"n_modes={result.n_modes} != find_modes={expected_n}"
 
     def test_h_factor_effect(self):
         """Lower h_factor gives lower dip_ratio (stronger bimodality)."""
@@ -1379,11 +1377,13 @@ class TestExcessMass:
     def test_trimodal_detection(self):
         """3-component mixture should estimate ≥2 modes."""
         rng = np.random.default_rng(42)
-        x = np.concatenate([
-            rng.normal(-4, 0.3, 150),
-            rng.normal(0, 0.3, 150),
-            rng.normal(4, 0.3, 150),
-        ])
+        x = np.concatenate(
+            [
+                rng.normal(-4, 0.3, 150),
+                rng.normal(0, 0.3, 150),
+                rng.normal(4, 0.3, 150),
+            ]
+        )
         result = excess_mass(x, n_boot=49, random_state=789)
         assert result.n_modes_estimated >= 2
         assert isinstance(result, ExcessMassResult)
