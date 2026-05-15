@@ -159,3 +159,16 @@ class TestSilvermanTest:
         x = BENCHMARK_CASES["moderate_separation"].generator(42)
         result = silverman_test(x, n_resamples=99)
         assert len(result.null_distribution) > 50  # most should converge
+
+
+class TestBootstrapStability:
+    """Test bootstrap edge cases."""
+
+    def test_bootstrap_all_fail(self):
+        """All bootstrap resamples failing should return NaN CI."""
+        # Use constant data where convergence fails
+        x = np.ones(20) * 5.0
+        result = bootstrap_critical_bandwidth(x, n_resamples=10)
+        if result.n_failed == result.n_resamples:
+            assert np.isnan(result.ci_lower)
+            assert np.isnan(result.ci_upper)
