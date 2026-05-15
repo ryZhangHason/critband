@@ -988,3 +988,114 @@ class TestNumericalStability:
         x = rng.normal(0, 1, 200)
         h, ok = critical_bandwidth(x, h_min=1e-12, h_max=1e-6)
         assert np.isfinite(h)
+
+
+class TestKModeDetection:
+    """Test k-mode generalization of critical_bandwidth."""
+
+    def test_k2_default_bimodal(self):
+        """k=2 default should match existing bimodal critical bandwidth."""
+        rng = np.random.default_rng(42)
+        x1 = rng.normal(-2, 0.5, 500)
+        x2 = rng.normal(2, 0.5, 500)
+        x = np.concatenate([x1, x2])
+
+        h_default, ok_default = critical_bandwidth(x, method="binary")
+        h_k2, ok_k2 = critical_bandwidth(x, k=2, method="binary")
+
+        assert ok_default and ok_k2
+        assert abs(h_default - h_k2) < 1e-6
+
+    def test_k2_unimodal(self):
+        """k=2 on unimodal data should return low h_crit."""
+        rng = np.random.default_rng(42)
+        x = rng.normal(0, 1, 200)
+
+        h, ok = critical_bandwidth(x, k=2, method="binary")
+        assert ok
+        assert 0 < h < 0.5  # unimodal → small critical h
+
+    def test_k3_trimodal(self):
+        """k=3 should detect a different critical bandwidth on trimodal data."""
+        rng = np.random.default_rng(42)
+        x1 = rng.normal(-4, 0.5, 300)
+        x2 = rng.normal(0, 0.5, 300)
+        x3 = rng.normal(4, 0.5, 300)
+        x = np.concatenate([x1, x2, x3])
+
+        h_k2, ok2 = critical_bandwidth(x, k=2, method="binary")
+        h_k3, ok3 = critical_bandwidth(x, k=3, method="binary")
+
+        assert ok2 and ok3
+        # h_crit for k=3 should be smaller than for k=2
+        # (need smaller h to resolve 3 modes)
+        assert h_k3 < h_k2, f"Expected h_k3 ({h_k3}) < h_k2 ({h_k2})"
+
+    def test_k4_quadrimodal(self):
+        """k=4 should detect critical bandwidth on quadrimodal data."""
+        rng = np.random.default_rng(42)
+        x1 = rng.normal(-6, 0.5, 200)
+        x2 = rng.normal(-2, 0.5, 200)
+        x3 = rng.normal(2, 0.5, 200)
+        x4 = rng.normal(6, 0.5, 200)
+        x = np.concatenate([x1, x2, x3, x4])
+
+        h_k4, ok = critical_bandwidth(x, k=4, method="binary")
+        assert ok
+        assert h_k4 > 0
+
+    def test_k_gt_modes(self):
+        """When k > actual meaningful modes, binary search still converges
+        but h_crit is very small (near h_min, resolving noise peaks)."""
+        rng = np.random.default_rng(42)
+        x = rng.normal(0, 1, 200)
+        h_min = silverman_bandwidth(x) / 20.0
+
+        h, ok = critical_bandwidth(x, k=5, method="binary")
+        # For normal data at tiny h, KDE can show spurious peaks from noise.
+        # The binary search should converge to h_crit near h_min.
+        assert ok, "Should still converge — at h_min there may be >=5 noisy peaks"
+        assert h >= h_min, f"h_crit should be >= h_min, got {h}"
+        assert h < silverman_bandwidth(x), "k=5 on normal data should give small h"
+
+    def test_k1_edge_case(self):
+        """k=1 is degenerate — no bandwidth gives <1 mode, so fails."""
+        rng = np.random.default_rng(42)
+        x = rng.normal(0, 1, 200)
+
+        h, ok = critical_bandwidth(x, k=1, method="binary")
+        # Even at maximal bandwidth, count_modes >= 1 always holds
+        assert not ok, "k=1 should fail — no h can give <1 mode"
+        # Returns h_max as the boundary
+
+    def test_k3_method_auto(self):
+        """Test k=3 with auto method selection."""
+        rng = np.random.default_rng(42)
+        x1 = rng.normal(-4, 0.5, 300)
+        x2 = rng.normal(0, 0.5, 300)
+        x3 = rng.normal(4, 0.5, 300)
+        x = np.concatenate([x1, x2, x3])
+
+        h_k3_binary, ok_binary = critical_bandwidth(x, k=3, method="binary")
+        h_k3_brent, ok_brent = critical_bandwidth(x, k=3, method="brent")
+        h_k3_auto, ok_auto = critical_bandwidth(x, k=3, method="auto")
+
+        assert ok_binary and ok_brent and ok_auto
+        # All methods should give reasonably close h_crit
+        assert abs(h_k3_binary - h_k3_auto) < abs(h_k3_binary) * 0.1
+        assert abs(h_k3_brent - h_k3_auto) < abs(h_k3_binary) * 0.1
+
+    def test_k2_backward_compat_auto(self):
+        """k=2 with auto method should match existing auto behavior."""
+        rng = np.random.default_rng(42)
+        x1 = rng.normal(-2, 0.5, 300)
+        x2 = rng.normal(2, 0.5, 300)
+        x = np.concatenate([x1, x2])
+
+        # Without k argument (backward compat)
+        h_no_k, ok_no_k = critical_bandwidth(x, method="auto")
+        # With explicit k=2
+        h_k2, ok_k2 = critical_bandwidth(x, k=2, method="auto")
+
+        assert ok_no_k and ok_k2
+        assert abs(h_no_k - h_k2) < 1e-6
