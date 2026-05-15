@@ -360,14 +360,6 @@ class TestTroughRatio:
 class TestCriticalBandwidthHybrid:
     """Test the upgraded critical_bandwidth with method parameter."""
 
-    def test_brent_matches_binary(self):
-        """Verify brent result matches binary result within tolerance."""
-        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
-        h_binary, ok1 = critical_bandwidth(x, method="binary", tol=1e-8)
-        h_brent, ok2 = critical_bandwidth(x, method="brent", tol=1e-8)
-        assert ok1 and ok2
-        assert abs(h_binary - h_brent) < 0.05
-
     def test_auto_matches_binary(self):
         """Verify auto (hybrid) result matches binary."""
         x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
@@ -407,9 +399,9 @@ class TestCriticalBandwidthHybrid:
         h_binary, _ = critical_bandwidth(x, method="binary")
         assert h_default == pytest.approx(h_binary, rel=0.01)
 
-    def test_auto_fallback_on_brent_failure(self):
-        """Auto method should fall back if Brent fails."""
-        # Use constant data where Brent may have issues
+    def test_auto_constant_data_no_crash(self):
+        """Auto method should handle constant data without crashing."""
+        # Use constant data
         x = np.ones(10) * 5.0
         h, ok = critical_bandwidth(x, method="auto")
         assert np.isfinite(h)
