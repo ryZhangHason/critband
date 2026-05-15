@@ -7,6 +7,8 @@ import pytest
 from scipy import integrate
 
 from pola import (
+    BimodalityStrength,
+    bimodality_strength,
     critical_bandwidth,
     detect_components,
     dip_test,
@@ -1237,3 +1239,116 @@ class TestFindModes:
             assert hasattr(m, "right_base")
             assert np.isfinite(m.position)
             assert m.height >= 0
+
+
+class TestBimodalityStrength:
+    """Test bimodality_strength() function."""
+
+    def test_strongly_bimodal(self):
+        """Well-separated bimodal at moderate h_factor should give 'strong'/'moderate'."""
+        rng = np.random.default_rng(42)
+        x = np.concatenate([rng.normal(-3, 0.3, 200), rng.normal(3, 0.3, 200)])
+        # Use h_factor=0.5 to get a genuinely deep trough
+        result = bimodality_strength(x, h_factor=0.5)
+        assert result.strength in ("strong", "moderate")
+        assert result.strength_score > 0.5
+        assert result.n_modes >= 2
+        assert result.dip_ratio < 0.5
+
+    def test_unimodal(self):
+        """Normal data should give 'unimodal' or 'weak' strength with score near 0."""
+        rng = np.random.default_rng(42)
+        x = rng.normal(0, 1, 500)
+        result = bimodality_strength(x)
+        # At h_analysis = h_crit * 0.85, normal data may show 2 noise modes
+        # with dip_ratio close to 1.0. The key check is score near 0.
+        assert result.strength in ("weak", "unimodal")
+        assert result.strength_score < 0.5
+        assert result.dip_ratio > 0.80
+
+    def test_weakly_bimodal(self):
+        """Barely separated data should give 'weak' or 'moderate' strength."""
+        rng = np.random.default_rng(42)
+        x = np.concatenate([rng.normal(-0.8, 0.5, 200), rng.normal(0.8, 0.5, 200)])
+        result = bimodality_strength(x)
+        assert result.strength in ("weak", "moderate")
+        assert 0.0 <= result.strength_score <= 1.0
+
+    def test_bimodality_strength_dataclass(self):
+        """All BimodalityStrength fields are populated correctly."""
+        rng = np.random.default_rng(42)
+        x = np.concatenate([rng.normal(-2, 0.3, 200), rng.normal(2, 0.3, 200)])
+        result = bimodality_strength(x)
+        assert isinstance(result, BimodalityStrength)
+        assert hasattr(result, "dip_ratio")
+        assert hasattr(result, "h_crit_ratio")
+        assert hasattr(result, "n_modes")
+        assert hasattr(result, "strength")
+        assert hasattr(result, "strength_score")
+        assert isinstance(result.dip_ratio, float)
+        assert isinstance(result.h_crit_ratio, float)
+        assert isinstance(result.n_modes, int)
+        assert isinstance(result.strength, str)
+        assert isinstance(result.strength_score, float)
+
+    def test_strength_score_range(self):
+        """strength_score is always in [0, 1]."""
+        rng = np.random.default_rng(42)
+        # Test various distributions
+        cases = [
+            rng.normal(0, 1, 500),
+            np.concatenate([rng.normal(-3, 0.3, 200), rng.normal(3, 0.3, 200)]),
+            np.concatenate([rng.normal(-0.8, 0.5, 200), rng.normal(0.8, 0.5, 200)]),
+        ]
+        for x in cases:
+            result = bimodality_strength(x)
+            assert 0.0 <= result.strength_score <= 1.0, (
+                f"score={result.strength_score} out of [0, 1]"
+            )
+
+    def test_dip_ratio_range(self):
+        """dip_ratio is always in [0, 1]."""
+        rng = np.random.default_rng(42)
+        x = np.concatenate([rng.normal(-2, 0.3, 200), rng.normal(2, 0.3, 200)])
+        result = bimodality_strength(x)
+        assert 0.0 <= result.dip_ratio <= 1.0
+
+    def test_h_crit_ratio_positive(self):
+        """h_crit_ratio is positive for normal data."""
+        rng = np.random.default_rng(42)
+        x = np.concatenate([rng.normal(-2, 0.3, 200), rng.normal(2, 0.3, 200)])
+        result = bimodality_strength(x)
+        assert result.h_crit_ratio > 0
+
+    def test_n_modes_consistent(self):
+        """n_modes from bimodality_strength matches find_modes."""
+        rng = np.random.default_rng(42)
+        x = np.concatenate([rng.normal(-2, 0.3, 200), rng.normal(2, 0.3, 200)])
+        h_crit, ok = critical_bandwidth(x)
+        assert ok
+        h_analysis = h_crit * 0.85
+        expected_n = find_modes(x, h_analysis).n_modes
+        result = bimodality_strength(x)
+        assert result.n_modes == expected_n, (
+            f"n_modes={result.n_modes} != find_modes={expected_n}"
+        )
+
+    def test_h_factor_effect(self):
+        """Lower h_factor gives lower dip_ratio (stronger bimodality)."""
+        rng = np.random.default_rng(42)
+        x = np.concatenate([rng.normal(-2, 0.3, 200), rng.normal(2, 0.3, 200)])
+        result_low = bimodality_strength(x, h_factor=0.5)
+        result_high = bimodality_strength(x, h_factor=0.95)
+        # Lower h_factor → deeper trough → smaller dip_ratio
+        assert result_low.dip_ratio <= result_high.dip_ratio + 1e-10, (
+            f"dip_ratio(low_h)={result_low.dip_ratio:.4f} > "
+            f"dip_ratio(high_h)={result_high.dip_ratio:.4f}"
+        )
+
+    def test_constant_data_handling(self):
+        """Constant data should not crash; returns unimodal."""
+        x = np.ones(10) * 5.0
+        result = bimodality_strength(x)
+        assert result.strength == "unimodal"
+        assert result.strength_score == 0.0
+        assert result.dip_ratio >= 0.95 or result.n_modes < 2
