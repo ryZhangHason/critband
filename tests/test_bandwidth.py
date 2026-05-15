@@ -169,6 +169,78 @@ class TestCriticalBandwidth:
         assert 0.7 < h_crit < 1.2
 
 
+class TestGaussianKdeFFT:
+    """Test FFT-accelerated KDE against direct method."""
+
+    def test_fft_matches_direct_small(self):
+        """FFT method should approximate direct for small data (binning error expected)."""
+        rng = np.random.default_rng(42)
+        x = rng.normal(0, 1, 200)
+        grid = np.linspace(-5, 5, 500)
+        h = 0.5
+        d_direct = gaussian_kde(x, grid, h)
+        d_fft = gaussian_kde(x, grid, h, use_fft=True)
+        # Small-n binning introduces error; verify approximate match
+        assert np.allclose(d_direct, d_fft, rtol=0.15, atol=1e-4)
+        # FFT integral should still be ~1
+        assert abs(np.trapezoid(d_fft, grid) - 1.0) < 0.05
+
+    def test_fft_matches_direct_large(self):
+        """FFT should match direct for large data (n > auto-switch threshold)."""
+        rng = np.random.default_rng(42)
+        x = rng.normal(0, 1, 10000)
+        grid = np.linspace(-5, 5, 1000)
+        h = 0.5
+        d_direct = gaussian_kde(x, grid, h)
+        d_fft = gaussian_kde(x, grid, h, use_fft=True)
+        assert np.allclose(d_direct, d_fft, rtol=0.005, atol=1e-4)
+
+    def test_fft_integral(self):
+        """FFT KDE should integrate to approximately 1."""
+        rng = np.random.default_rng(42)
+        x = rng.normal(0, 1, 10000)
+        grid = np.linspace(-5, 5, 2000)
+        h = 0.5
+        d = gaussian_kde(x, grid, h, use_fft=True)
+        integral = np.trapezoid(d, grid)
+        assert abs(integral - 1.0) < 0.01
+
+    def test_fft_kernel_options(self):
+        """FFT should work with all built-in kernels (large n)."""
+        rng = np.random.default_rng(42)
+        x = rng.normal(0, 1, 10000)
+        grid = np.linspace(-5, 5, 500)
+        h = 0.5
+        for k in ["gaussian", "epanechnikov", "uniform", "triangular"]:
+            d_direct = gaussian_kde(x, grid, h, kernel=k)
+            d_fft = gaussian_kde(x, grid, h, kernel=k, use_fft=True)
+            assert np.allclose(d_direct, d_fft, rtol=0.02, atol=1e-4), f"Kernel {k} failed"
+
+    def test_fft_auto_switch_small(self):
+        """Auto mode (use_fft=None) should use direct for small n."""
+        rng = np.random.default_rng(42)
+        x = rng.normal(0, 1, 200)
+        grid = np.linspace(-5, 5, 500)
+        h = 0.5
+        d_auto = gaussian_kde(x, grid, h)  # use_fft=None, n<5000 → direct
+        d_direct = gaussian_kde(x, grid, h, use_fft=False)
+        # Should be bit-identical since both use direct
+        assert np.array_equal(d_auto, d_direct)
+
+    def test_fft_benchmark_cases(self):
+        """FFT should produce valid KDE on benchmark data (binning error on n~200 data)."""
+        from pola.benchmark import BENCHMARK_CASES
+
+        for name, case in BENCHMARK_CASES.items():
+            x = case.generator(42)
+            grid = np.linspace(x.min() - 3, x.max() + 3, 500)
+            h = case.h_crit_expected
+            d_direct = gaussian_kde(x, grid, h)
+            d_fft = gaussian_kde(x, grid, h, use_fft=True)
+            # Moderate tolerance; benchmark data has n=200-600, binning error is ~5-10%
+            assert np.allclose(d_direct, d_fft, rtol=0.12, atol=1e-4), f"{name} failed"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
 
