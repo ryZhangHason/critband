@@ -8,10 +8,12 @@ from scipy import integrate
 
 from pola import (
     BimodalityStrength,
+    ExcessMassResult,
     bimodality_strength,
     critical_bandwidth,
     detect_components,
     dip_test,
+    excess_mass,
     find_modes,
     find_trough,
     gaussian_kde,
@@ -1352,3 +1354,84 @@ class TestBimodalityStrength:
         assert result.strength == "unimodal"
         assert result.strength_score == 0.0
         assert result.dip_ratio >= 0.95 or result.n_modes < 2
+
+
+class TestExcessMass:
+    """Test excess mass test for multimodality."""
+
+    def test_bimodal_detection(self):
+        """Well-separated bimodal data should detect ≥2 modes."""
+        rng = np.random.default_rng(42)
+        x = np.concatenate([rng.normal(-3, 0.3, 200), rng.normal(3, 0.3, 200)])
+        result = excess_mass(x, n_boot=49, random_state=123)
+        assert result.n_modes_estimated >= 2
+        assert isinstance(result, ExcessMassResult)
+
+    def test_unimodal_detection(self):
+        """Normal data may or may not reject H0 of 1 mode (stochastic)."""
+        rng = np.random.default_rng(42)
+        x = rng.normal(0, 1, 200)
+        result = excess_mass(x, n_boot=49, random_state=456)
+        # Weak assertion: result should be a valid ExcessMassResult
+        assert isinstance(result, ExcessMassResult)
+        assert 0 <= result.n_modes_estimated <= 5
+
+    def test_trimodal_detection(self):
+        """3-component mixture should estimate ≥2 modes."""
+        rng = np.random.default_rng(42)
+        x = np.concatenate([
+            rng.normal(-4, 0.3, 150),
+            rng.normal(0, 0.3, 150),
+            rng.normal(4, 0.3, 150),
+        ])
+        result = excess_mass(x, n_boot=49, random_state=789)
+        assert result.n_modes_estimated >= 2
+        assert isinstance(result, ExcessMassResult)
+
+    def test_result_dataclass(self):
+        """All fields present and correct types."""
+        rng = np.random.default_rng(42)
+        x = np.concatenate([rng.normal(-3, 0.3, 200), rng.normal(3, 0.3, 200)])
+        result = excess_mass(x, n_boot=49, random_state=42)
+        assert isinstance(result.n_modes_estimated, int)
+        assert isinstance(result.test_statistics, np.ndarray)
+        assert isinstance(result.p_values, np.ndarray)
+        assert isinstance(result.d_values, np.ndarray)
+        assert isinstance(result.excess_mass_values, np.ndarray)
+        assert isinstance(result.lambda_grid, np.ndarray)
+        assert isinstance(result.n_boot, int)
+        assert isinstance(result.bandwidth, float)
+        assert len(result.test_statistics) == 4  # n_modes_max=5 → 4 deltas
+        assert len(result.d_values) == 5  # n_modes_max=5
+
+    def test_p_values_in_range(self):
+        """All p-values are in [0, 1]."""
+        rng = np.random.default_rng(42)
+        x = np.concatenate([rng.normal(-3, 0.3, 200), rng.normal(3, 0.3, 200)])
+        result = excess_mass(x, n_boot=49, random_state=42)
+        assert np.all(result.p_values >= 0.0)
+        assert np.all(result.p_values <= 1.0)
+
+    def test_test_statistics_non_negative(self):
+        """Δ_k should be non-negative (D_k >= D_{k+1})."""
+        rng = np.random.default_rng(42)
+        x = np.concatenate([rng.normal(-3, 0.3, 200), rng.normal(3, 0.3, 200)])
+        result = excess_mass(x, n_boot=49, random_state=42)
+        assert np.all(result.test_statistics >= -1e-12)
+
+    def test_custom_bandwidth(self):
+        """Explicitly passing h should still work."""
+        rng = np.random.default_rng(42)
+        x = np.concatenate([rng.normal(-3, 0.3, 200), rng.normal(3, 0.3, 200)])
+        result = excess_mass(x, h=0.5, n_boot=49, random_state=42)
+        assert isinstance(result, ExcessMassResult)
+        assert result.bandwidth == 0.5
+
+    def test_constant_data(self):
+        """Constant data should not crash, returns valid result."""
+        x = np.ones(20) * 5.0
+        result = excess_mass(x, n_boot=10, random_state=42)
+        assert isinstance(result, ExcessMassResult)
+        assert 0 <= result.n_modes_estimated <= 5
+        assert np.all(result.p_values >= 0.0)
+        assert np.all(result.p_values <= 1.0)
