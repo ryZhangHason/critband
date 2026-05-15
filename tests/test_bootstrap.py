@@ -5,7 +5,8 @@ Tests for bootstrap confidence interval estimation.
 import numpy as np
 import pytest
 
-from pola import BootstrapResult, bootstrap_critical_bandwidth
+from pola import BootstrapResult, SilvermanTestResult, bootstrap_critical_bandwidth, silverman_test
+from pola.benchmark import BENCHMARK_CASES
 
 
 class TestBootstrapResultDataclass:
@@ -114,3 +115,47 @@ class TestBootstrapCriticalBandwidth:
 
         result = bootstrap_critical_bandwidth(x, n_resamples=20, random_state=42, alpha=0.1)
         assert result.confidence_level == 0.9
+
+
+class TestSilvermanTest:
+    """Test Silverman's test for bimodality."""
+
+    def test_silverman_test_bimodal_data(self):
+        """Well-separated bimodal data should give small p-value."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        result = silverman_test(x, n_resamples=99)
+        assert result.p_value < 0.05
+        assert result.h_crit > 0
+        assert len(result.null_distribution) > 0
+
+    def test_silverman_test_unimodal_data(self):
+        """Unimodal data should give large p-value."""
+        rng = np.random.default_rng(42)
+        x = rng.normal(0, 1, 200)
+        result = silverman_test(x, n_resamples=99)
+        assert result.p_value > 0.05
+
+    def test_silverman_test_constant_data(self):
+        """Constant data should not crash."""
+        x = np.ones(50) * 5.0
+        result = silverman_test(x, n_resamples=99)
+        assert result.p_value >= 0  # Should return valid p-value
+
+    def test_silverman_test_reproducible(self):
+        """Same random_state gives same result."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        r1 = silverman_test(x, n_resamples=99, random_state=42)
+        r2 = silverman_test(x, n_resamples=99, random_state=42)
+        assert r1.p_value == r2.p_value
+
+    def test_silverman_test_n_extreme_reasonable(self):
+        """n_extreme should be between 0 and n_resamples."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        result = silverman_test(x, n_resamples=99)
+        assert 0 <= result.n_extreme <= 99
+
+    def test_silverman_test_null_distribution_length(self):
+        """Null distribution should have reasonable length."""
+        x = BENCHMARK_CASES["moderate_separation"].generator(42)
+        result = silverman_test(x, n_resamples=99)
+        assert len(result.null_distribution) > 50  # most should converge
