@@ -99,7 +99,7 @@ def critical_bandwidth(
 - `h_max` — upper search bound (default: Silverman * 10).
 - `tol` — convergence tolerance.
 - `max_iter` — maximum iterations.
-- `method` — search method: `"auto"` (default, hybrid Brent + binary), `"binary"` (pure binary search), `"brent"` (pure Brent).
+- `method` — search method: `"auto"` (default, bracket then binary search) or `"binary"` (pure binary search).
 - `kernel` — kernel function (default `"gaussian"`). Built-in: `"epanechnikov"`, `"uniform"`, `"triangular"`. Accepts callables.
 
 **Returns:** `(h_crit, success)` — critical bandwidth value and convergence flag.
@@ -115,7 +115,7 @@ h_crit, ok = critical_bandwidth(x)
 ```
 
 **Notes:**
-- `method="auto"` performs a coarse binary search to bracket the root, then switches to Brent's method (`scipy.optimize.brentq`) on the continuous trough-ratio objective `f(h) = dip_ratio(h) - 0.5`. Falls back to pure binary search if Brent fails.
+- `method="auto"` performs a coarse binary search to bracket the root (10 iterations), then refines with full binary search to the specified tolerance. `method="binary"` runs full binary search from the initial bounds.
 - If already unimodal at `h_min`, returns `(h_min, False)`.
 - If still bimodal at `h_max`, returns `(h_max, False)`.
 

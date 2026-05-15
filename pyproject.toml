@@ -1,6 +1,6 @@
 [project]
 name = "pola"
-version = "0.0.2"
+version = "0.1.0"
 authors = [
   { name="QiHao498", email="2332792514@qq.com" },
   { name="ryZhangHason", email="ruiyuzh@connect.hku.hk" },

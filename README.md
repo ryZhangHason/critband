@@ -115,17 +115,14 @@ $$h = 1.06 \cdot \min(\sigma, \text{IQR} / 1.34) \cdot n^{-1/5}$$
 
 This is used as the baseline for the critical bandwidth search: the solver searches for $h_{\text{crit}}$ in the interval $[h/20, 10h]$, which captures the transition for typical bimodal distributions.
 
-### Brent-Dekker Hybrid Solver
+### Critical Bandwidth Solver
 
-The critical bandwidth search uses Brent's method on the continuous trough-ratio objective:
+The critical bandwidth is found via **binary search** on KDE mode counts. The solver:
+1. Automatically computes bounds from Silverman's rule: $[h_{\text{silverman}}/20, 10 \cdot h_{\text{silverman}}]$
+2. Optionally narrows the bracket with a coarse binary search (10 iterations) via `method="auto"`
+3. Refines with full binary search to user-specified tolerance (default $10^{-6}$)
 
-$$f(h) = \text{dip\_ratio}(h) - 0.5$$
-
-where $\text{dip\_ratio}(h) = \text{valley\_height} / \min(\text{peak\_height})$ is a continuous measure of bimodality in $(0, 1]$. Values near 0 indicate strong bimodality; values near 1 indicate unimodality. The solver:
-
-1. Performs a coarse binary search to bracket the root
-2. Switches to Brent's method for precision convergence
-3. Falls back to pure binary search if Brent fails to converge
+The `dip_ratio` (via `_trough_ratio`) is available as a descriptive bimodality strength measure but is not used as the optimizer objective. At the critical bandwidth, the KDE transitions from bimodal to unimodal, and `dip_ratio ≈ 1.0`.
 
 ### Related Work
 
@@ -239,4 +236,4 @@ uv run python examples/benchmark_performance.py --output results.csv
 
 ## License
 
-MIT
+Apache-2.0
