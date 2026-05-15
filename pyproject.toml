@@ -2,8 +2,8 @@
 name = "pola"
 version = "0.1.0"
 authors = [
-  { name="QiHao498", email="2332792514@qq.com" },
-  { name="ryZhangHason", email="ruiyuzh@connect.hku.hk" },
+  { name="Ruiyu Zhang", email="ruiyuzh@connect.hku.hk" },
+  { name="Qihao Wang", email="2332792514@qq.com" },
 ]
 description = "Calculate critical bandwidth for bimodal distributions in kernel density estimation"
 readme = "README.md"
