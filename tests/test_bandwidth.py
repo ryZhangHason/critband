@@ -823,8 +823,40 @@ class TestKdeGridPoints:
         from pola.bandwidth import _kde_grid_points
 
         result = _kde_grid_points(5000, h=0.01, data_range=10)
-        # base=500, ratio=250, scale=3.0, points=1500 → clamped to 800
-        assert result == 800, f"Expected 800 (max_grid), got {result}"
+        # base=500, ratio=250, scale=3.0, points=1500 → auto_max=2500, clamped to 1500
+        assert result == 1500, f"Expected 1500 (auto-scaled max), got {result}"
+
+    def test_max_grid_auto_scale(self):
+        """Auto max_grid scales with n."""
+        from pola.bandwidth import _kde_grid_points
+
+        # n=1000: max_grid should be 800
+        assert _kde_grid_points(1000) <= 800
+        # n=10000: max_grid should be up to 5000
+        result = _kde_grid_points(10000, h=0.01, data_range=10)
+        assert result > 800, f"Expected >800 for n=10000, got {result}"
+        # n=20000: cap at 5000
+        result2 = _kde_grid_points(20000, h=0.01, data_range=10)
+        assert result2 <= 5000
+        assert result2 >= 2000, f"Expected >=2000 for n=20000, got {result2}"
+
+    def test_max_grid_explicit_override(self):
+        """Explicit max_grid overrides auto."""
+        from pola.bandwidth import _kde_grid_points
+
+        result = _kde_grid_points(10000, max_grid=1000)
+        assert result <= 1000
+
+    def test_auto_max_clamping(self):
+        """Auto max_grid should not exceed limits."""
+        from pola.bandwidth import _kde_grid_points
+
+        # n=1: min_grid=200
+        result = _kde_grid_points(1)
+        assert result <= 800 and result >= 200
+        # n=10^6: capped at 5000
+        result2 = _kde_grid_points(1000000, h=0.01, data_range=10)
+        assert result2 <= 5000
 
 
 class TestCriticalBandwidthCI:
