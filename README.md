@@ -35,9 +35,14 @@ print(f"Converged: {success}")
 |----------|-------------|
 | `silverman_bandwidth(x)` | Silverman's rule-of-thumb bandwidth: 1.06 · min(σ, IQR/1.34) · n^(-1/5) |
 | `gaussian_kde(x, grid, h, use_fft=None)` | KDE via direct O(n·g) or FFT O(g·log(g)) computation; auto-selects FFT for n > 5000 |
-| `critical_bandwidth(x, return_ci=False)` | Critical bandwidth via binary or Brent search; optionally returns bootstrap confidence interval `(h_crit, ok, ci_low, ci_high, se)` |
-| `dip_test(x)` | Hartigan's dip test for unimodality; returns `(dip, p_value)` |
-| `silverman_test(x)` | Silverman's bootstrap test for bimodality; returns `(h_crit, p_value)` |
+| `critical_bandwidth(x, k=2, return_ci=False)` | Critical bandwidth for k-mode detection; auto/binary/brent methods; optionally returns bootstrap CI |
+| `find_modes(x, h)` | Detect all KDE modes at bandwidth h; returns `ModeResult` with per-mode position, height, width, prominence |
+| `find_trough(x, h)` | Find valley between the two highest KDE peaks; returns x-coordinate or `None` |
+| `detect_components(x)` | Decompose bimodal distribution into two Gaussian components; returns `BimodalDecomposition` |
+| `bimodality_strength(x)` | Comprehensive bimodality assessment; returns interpretable strength label + score in `BimodalityStrength` |
+| `dip_test(x)` | Hartigan's dip test for unimodality; returns `DipTestResult` dataclass |
+| `silverman_test(x)` | Silverman's bootstrap test for bimodality; returns `SilvermanTestResult` dataclass |
+| `excess_mass(x)` | Müller & Sawitzki excess mass test for multimodality; detects any number of modes, returns `ExcessMassResult` |
 
 The `critical_bandwidth` function uses automatic method selection: **Brent's method** for well-separated data (2-3× faster), **binary search** for weak/small-n cases. All three methods (`auto`, `binary`, `brent`) produce consistent results.
 
@@ -119,24 +124,31 @@ This is used as the baseline for the critical bandwidth search: the solver searc
 
 ### Critical Bandwidth Solver
 
-The critical bandwidth is found via **binary search** on KDE mode counts. The solver:
+The critical bandwidth is found via **binary search** on KDE mode counts (for any k). The solver:
 1. Automatically computes bounds from Silverman's rule: $[h_{\text{silverman}}/20, 10 \cdot h_{\text{silverman}}]$
-2. Optionally narrows the bracket with a coarse binary search (10 iterations) via `method="auto"`
-3. Refines with full binary search to user-specified tolerance (default $10^{-6}$)
+2. Uses `method="auto"` (default): Brent's method for large, well-separated data (2-3× faster); binary search for weak/small-n cases
+3. For k > 2, `critical_bandwidth(x, k=3)` finds the bandwidth where trimodality disappears, etc.
+4. Optionally returns a bootstrap confidence interval via `return_ci=True`
 
-The `dip_ratio` (via `_trough_ratio`) is available as a descriptive bimodality strength measure but is not used as the optimizer objective. At the critical bandwidth, the KDE transitions from bimodal to unimodal, and `dip_ratio ≈ 1.0`.
+The `dip_ratio` (via `_trough_ratio`) is available as a descriptive bimodality strength measure but is not used as the optimizer objective.
+
+### Excess Mass Test
+
+The `excess_mass` function implements the Müller & Sawitzki (1991) test for multimodality. It measures the amount of probability mass above threshold levels in a KDE, and uses bootstrap calibration to estimate the number of modes — unlike the Silverman test, it can detect **any** number of modes in a single call.
 
 ### Related Work
 
 - **Silverman (1981)** — The critical bandwidth test for multimodality in kernel density estimates
 - **Hartigan & Hartigan (1985)** — The Dip Test of Unimodality, a complementary non-parametric approach
+- **Müller & Sawitzki (1991)** — Excess mass estimates and tests for multimodality
 - **Hall & York (2001)** — On the calibration of Silverman's test for multimodality, refinements to the original method
 
 ### References
 
 1. Silverman, B.W. (1986). *Density Estimation for Statistics and Data Analysis*. Chapman and Hall.
 2. Hartigan, J.A. & Hartigan, P.M. (1985). The Dip Test of Unimodality. *The Annals of Statistics*, 13(1), 70-84.
-3. Cheng, M.-Y. & Hall, P. (1998). Calibrating the excess mass and dip tests of modality. *Journal of the Royal Statistical Society: Series B*, 60(3), 579-589.
+3. Müller, D.W. & Sawitzki, G. (1991). Excess Mass Estimates and Tests for Multimodality. *JASA*, 86(415), 738-746.
+4. Cheng, M.-Y. & Hall, P. (1998). Calibrating the excess mass and dip tests of modality. *Journal of the Royal Statistical Society: Series B*, 60(3), 579-589.
 
 ## Installation
 
@@ -163,7 +175,8 @@ uv run python -m pytest tests/ -v
 
 ## Why pola?
 
-- **Zero-config modality testing**: One function call tells you whether your distribution is bimodal, with a well-defined threshold.
+- **Zero-config modality testing**: One function call tells you whether your distribution is bimodal, with a well-defined threshold. Or use `bimodality_strength()` for an interpretable strength score, or `excess_mass()` to estimate how many modes your data has.
+- **k-mode detection**: `critical_bandwidth(x, k=3)` detects the bandwidth where trimodality disappears — generalize to any k.
 - **Any-file input**: 9 formats from a single API. CSV, Excel, PDF, Word, JSON, HTML, Markdown — just point `read_data` at the file and go.
 - **One-command install**: `pip install pola` installs everything. No system packages, no manual steps, no Tesseract OCR.
 - **Pure Python dependencies**: All 4 additional libraries (openpyxl, xlrd, python-docx, pdfplumber) are pure Python — no compiled extensions.
@@ -173,22 +186,39 @@ uv run python -m pytest tests/ -v
 
 ```python
 import numpy as np
-from pola import critical_bandwidth
+from pola import critical_bandwidth, bimodality_strength, excess_mass
 
 # Unimodal data — the function tells you it's already unimodal
 unimodal = np.random.normal(0, 1, 500)
 h_crit, success = critical_bandwidth(unimodal)
-print(f"Unimodal data: h_crit={h_crit:.4f}, converged={success}")
+print(f"Unimodal: h_crit={h_crit:.4f}, converged={success}")
 # → success may be False (already unimodal at minimum bandwidth)
 
-# Bimodal data — critical bandwidth found
+# Bimodal data — full pipeline
 bimodal = np.concatenate([
     np.random.normal(-3, 0.5, 300),
     np.random.normal( 3, 0.5, 300)
 ])
+
 h_crit, success = critical_bandwidth(bimodal)
-print(f"Bimodal data: h_crit={h_crit:.4f}, converged={success}")
-# → h_crit is the transition bandwidth; bandwidths below it are bimodal
+print(f"Bimodal: h_crit={h_crit:.4f}, converged={success}")
+
+# Interpretable strength assessment
+s = bimodality_strength(bimodal)
+print(f"Strength: {s.strength} (score={s.strength_score:.2f})")
+
+# Excess mass test — detects number of modes
+e = excess_mass(bimodal, n_boot=199)
+print(f"Estimated modes: {e.n_modes_estimated}")
+
+# Trimodal data with k-mode detection
+trimodal = np.concatenate([
+    np.random.normal(-4, 0.3, 150),
+    np.random.normal( 0, 0.3, 150),
+    np.random.normal( 4, 0.3, 150),
+])
+h_k3, ok = critical_bandwidth(trimodal, k=3)
+print(f"Trimodal (k=3): h_crit={h_k3:.4f}")
 ```
 
 ## Visualization Examples
