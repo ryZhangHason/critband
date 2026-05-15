@@ -5,7 +5,7 @@ Tests for bootstrap confidence interval estimation.
 import numpy as np
 import pytest
 
-from pola import BootstrapResult, SilvermanTestResult, bootstrap_critical_bandwidth, silverman_test
+from pola import BootstrapResult, bootstrap_critical_bandwidth, silverman_test
 from pola.benchmark import BENCHMARK_CASES
 
 

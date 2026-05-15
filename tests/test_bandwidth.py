@@ -10,6 +10,7 @@ from pola import (
     critical_bandwidth,
     detect_components,
     dip_test,
+    find_modes,
     find_trough,
     gaussian_kde,
     silverman_bandwidth,
@@ -301,12 +302,12 @@ class TestConstantData:
     def test_count_modes_zero_bandwidth(self):
         x = np.random.normal(0, 1, 100)
         modes = count_modes(x, h=0.0)
-        assert modes == 1  # zero bandwidth → always unimodal
+        assert modes == 0  # zero bandwidth → no modes (h<=0 returns 0)
 
     def test_count_modes_negative_bandwidth(self):
         x = np.random.normal(0, 1, 100)
         modes = count_modes(x, h=-1.0)
-        assert modes == 1
+        assert modes == 0
 
 
 class TestStability:
@@ -1099,3 +1100,140 @@ class TestKModeDetection:
 
         assert ok_no_k and ok_k2
         assert abs(h_no_k - h_k2) < 1e-6
+
+
+class TestFindModes:
+    """Test find_modes() with detailed mode metadata."""
+
+    def test_bimodal_modes(self):
+        """Bimodal data should return exactly 2 modes near the component means."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        h = 0.8  # well below h_crit (~1.86) to ensure bimodal
+        result = find_modes(x, h)
+        assert result.n_modes == 2, f"Expected 2 modes, got {result.n_modes}"
+        positions = sorted([m.position for m in result.modes])
+        # Modes should be near -2 and +2
+        assert abs(positions[0] - (-2.0)) < 0.5, (
+            f"First mode at {positions[0]:.3f}, expected near -2"
+        )
+        assert abs(positions[1] - 2.0) < 0.5, (
+            f"Second mode at {positions[1]:.3f}, expected near 2"
+        )
+
+    def test_unimodal_modes(self):
+        """Normal data should return 1 mode near center."""
+        rng = np.random.default_rng(42)
+        x = rng.normal(0, 1, 500)
+        h = silverman_bandwidth(x)
+        result = find_modes(x, h)
+        assert result.n_modes == 1, f"Expected 1 mode, got {result.n_modes}"
+        assert abs(result.modes[0].position) < 0.5, (
+            f"Mode position {result.modes[0].position:.3f} not near center"
+        )
+
+    def test_mode_positions_correct(self):
+        """Well-separated bimodal: mode positions should be close to true means."""
+        rng = np.random.default_rng(42)
+        x1 = rng.normal(-3, 0.3, 200)
+        x2 = rng.normal(3, 0.3, 200)
+        x = np.concatenate([x1, x2])
+        h = 0.5  # small enough to resolve both modes clearly
+        result = find_modes(x, h)
+        assert result.n_modes == 2, f"Expected 2 modes, got {result.n_modes}"
+        positions = sorted([m.position for m in result.modes])
+        assert abs(positions[0] - (-3.0)) < 0.4, (
+            f"Left mode at {positions[0]:.3f}, expected near -3"
+        )
+        assert abs(positions[1] - 3.0) < 0.4, (
+            f"Right mode at {positions[1]:.3f}, expected near 3"
+        )
+
+    def test_trimodal_modes(self):
+        """Trimodal data should detect 3 modes."""
+        x = BENCHMARK_CASES["trimodal"].generator(42)
+        h = 0.4  # small enough to resolve 3 modes
+        result = find_modes(x, h)
+        assert result.n_modes == 3, f"Expected 3 modes, got {result.n_modes}"
+        positions = sorted([m.position for m in result.modes])
+        # Should be near -3, 0, 3
+        assert abs(positions[0] - (-3.0)) < 0.5
+        assert abs(positions[1] - 0.0) < 0.5
+        assert abs(positions[2] - 3.0) < 0.5
+
+    def test_zero_h(self):
+        """h=0 returns empty result with n_modes=0."""
+        x = np.random.normal(0, 1, 100)
+        result = find_modes(x, h=0.0)
+        assert result.n_modes == 0
+        assert len(result.modes) == 0
+        assert result.bandwidth == 0.0
+
+    def test_negative_h(self):
+        """h<0 returns empty result with n_modes=0."""
+        x = np.random.normal(0, 1, 100)
+        result = find_modes(x, h=-1.0)
+        assert result.n_modes == 0
+        assert len(result.modes) == 0
+
+    def test_prominence_filtering(self):
+        """High prominence threshold should filter out spurious modes."""
+        rng = np.random.default_rng(42)
+        x = rng.normal(0, 1, 200)
+        h = silverman_bandwidth(x) / 4  # small h → many noise peaks
+        # Very high prominence threshold
+        result_high = find_modes(x, h, prominence=0.5)
+        # Very low prominence threshold
+        result_low = find_modes(x, h, prominence=0.001)
+        # High threshold should detect fewer or equal modes
+        assert result_high.n_modes <= result_low.n_modes, (
+            f"High prominence ({result_high.n_modes}) should give"
+            f" ≤ low prominence ({result_low.n_modes})"
+        )
+
+    def test_mode_width_positive(self):
+        """All mode widths should be positive and finite."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        h = 0.8
+        result = find_modes(x, h)
+        for mode in result.modes:
+            assert np.isfinite(mode.width), f"Width not finite: {mode.width}"
+            assert mode.width >= 0, f"Width negative: {mode.width}"
+
+    def test_consistency_with_count_modes(self):
+        """len(find_modes(x, h).modes) == count_modes(x, h) for various h."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        for h in [0.3, 0.6, 1.0, 1.5, 2.0, 3.0]:
+            result = find_modes(x, h)
+            n = count_modes(x, h)
+            assert len(result.modes) == n, (
+                f"h={h}: find_modes has {len(result.modes)} modes, "
+                f"count_modes returns {n}"
+            )
+            assert result.n_modes == n, (
+                f"h={h}: result.n_modes={result.n_modes} != count_modes={n}"
+            )
+
+    def test_mode_result_dataclass_fields(self):
+        """ModeResult should have all expected fields."""
+        x = np.random.normal(0, 1, 200)
+        result = find_modes(x, silverman_bandwidth(x))
+        assert hasattr(result, "n_modes")
+        assert hasattr(result, "modes")
+        assert hasattr(result, "bandwidth")
+        assert hasattr(result, "grid_points")
+        assert isinstance(result.modes, list)
+
+    def test_mode_dataclass_fields(self):
+        """Each Mode should have all expected fields."""
+        x = np.random.normal(0, 1, 200)
+        result = find_modes(x, silverman_bandwidth(x) / 4)
+        if result.n_modes > 0:
+            m = result.modes[0]
+            assert hasattr(m, "position")
+            assert hasattr(m, "height")
+            assert hasattr(m, "width")
+            assert hasattr(m, "prominence")
+            assert hasattr(m, "left_base")
+            assert hasattr(m, "right_base")
+            assert np.isfinite(m.position)
+            assert m.height >= 0
