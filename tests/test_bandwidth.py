@@ -408,6 +408,91 @@ class TestCriticalBandwidthHybrid:
         # ok may be False (already unimodal) but shouldn't crash
 
 
+class TestBrentSolver:
+    """Test the Brent's method solver for critical bandwidth."""
+
+    @pytest.mark.parametrize("case_name", list(BENCHMARK_CASES.keys()))
+    def test_brent_matches_binary(self, case_name):
+        """Brent method matches binary reference on every benchmark case."""
+        case = BENCHMARK_CASES[case_name]
+        x = case.generator(42)
+        h_bin, ok1 = critical_bandwidth(x, method="binary", tol=1e-8, max_iter=500)
+        h_brn, ok2 = critical_bandwidth(x, method="brent", tol=1e-8, max_iter=100)
+        assert ok1, f"{case_name}: binary did not converge"
+        assert ok2, f"{case_name}: brent did not converge"
+        assert abs(h_bin - h_brn) < max(case.h_crit_tolerance, 0.02), (
+            f"{case_name}: binary={h_bin:.6f}, brent={h_brn:.6f}"
+        )
+
+    @pytest.mark.parametrize("case_name", list(BENCHMARK_CASES.keys()))
+    def test_brent_verifies_result(self, case_name):
+        """Brent's result is verified: at h_crit, KDE has 1 mode."""
+        case = BENCHMARK_CASES[case_name]
+        x = case.generator(42)
+        h_crit, ok = critical_bandwidth(x, method="brent", tol=1e-8, max_iter=100)
+        assert ok, f"{case_name}: brent did not converge"
+        from pola.bandwidth import count_modes
+        assert count_modes(x, h_crit) == 1, (
+            f"{case_name}: h_crit={h_crit:.6f} has {count_modes(x, h_crit)} modes"
+        )
+
+    def test_brent_objective_sign_change(self):
+        """_brent_objective returns positive at h_min, negative at h_max."""
+        from pola.bandwidth import _brent_objective, silverman_bandwidth
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        h_min = silverman_bandwidth(x) / 20.0
+        h_max = silverman_bandwidth(x) * 10.0
+        f_min = _brent_objective(h_min, x)
+        f_max = _brent_objective(h_max, x)
+        assert f_min > 0, f"f(h_min={h_min:.6f}) = {f_min:.6f} should be positive"
+        assert f_max < 0, f"f(h_max={h_max:.6f}) = {f_max:.6f} should be negative"
+
+    def test_brent_objective_zero_h(self):
+        """h <= 0 returns positive (bimodal forcing)."""
+        from pola.bandwidth import _brent_objective
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        assert _brent_objective(0.0, x) > 0
+        assert _brent_objective(-1.0, x) > 0
+
+    def test_brent_objective_unimodal_data(self):
+        """Unimodal data returns negative at all bandwidths."""
+        from pola.bandwidth import _brent_objective, silverman_bandwidth
+        rng = np.random.default_rng(42)
+        x = rng.normal(0, 1, 500)
+        h = silverman_bandwidth(x)
+        assert _brent_objective(h, x) < 0
+
+    def test_brent_constant_data_fallback(self):
+        """Constant data falls back gracefully (unimodal at min bandwidth)."""
+        x = np.ones(10) * 5.0
+        h, ok = critical_bandwidth(x, method="brent")
+        assert np.isfinite(h)
+        # ok may be False (already unimodal at h_min) but shouldn't crash
+
+    def test_brent_uses_kernel(self):
+        """Brent method respects kernel parameter."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        h_gauss, ok1 = critical_bandwidth(x, method="brent", kernel="gaussian")
+        h_ep, ok2 = critical_bandwidth(x, method="brent", kernel="epanechnikov")
+        assert ok1 and ok2
+        # Different kernels should give different results
+        assert abs(h_gauss - h_ep) > 1e-6
+
+    def test_brent_deterministic(self):
+        """Brent method is deterministic on same data."""
+        x = np.array([-2.1, -1.8, -1.7, 1.8, 2.0, 2.2])
+        h1, _ = critical_bandwidth(x, method="brent", tol=1e-8, max_iter=100)
+        h2, _ = critical_bandwidth(x, method="brent", tol=1e-8, max_iter=100)
+        assert h1 == pytest.approx(h2)
+
+    def test_brent_custom_bounds(self):
+        """Brent method works with custom bounds."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        h, ok = critical_bandwidth(x, method="brent", h_min=0.1, h_max=5.0)
+        assert ok
+        assert 0.5 < h < 3.0
+
+
 class TestFindTrough:
     """Test find_trough function."""
 
