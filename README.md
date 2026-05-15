@@ -34,10 +34,12 @@ print(f"Converged: {success}")
 | Function | Description |
 |----------|-------------|
 | `silverman_bandwidth(x)` | Silverman's rule-of-thumb bandwidth: 1.06 · min(σ, IQR/1.34) · n^(-1/5) |
-| `gaussian_kde(x, grid, h)` | Gaussian KDE evaluated on a user-specified grid |
-| `critical_bandwidth(x)` | Binary search for the smallest unimodal bandwidth; returns `(h_crit, success)` |
+| `gaussian_kde(x, grid, h, use_fft=None)` | KDE via direct O(n·g) or FFT O(g·log(g)) computation; auto-selects FFT for n > 5000 |
+| `critical_bandwidth(x, return_ci=False)` | Critical bandwidth via binary or Brent search; optionally returns bootstrap confidence interval `(h_crit, ok, ci_low, ci_high, se)` |
+| `dip_test(x)` | Hartigan's dip test for unimodality; returns `(dip, p_value)` |
+| `silverman_test(x)` | Silverman's bootstrap test for bimodality; returns `(h_crit, p_value)` |
 
-The `critical_bandwidth` function uses binary search between lower and upper bounds (auto-computed from Silverman's rule) to find the exact transition point where the density estimate becomes unimodal.
+The `critical_bandwidth` function uses automatic method selection: **Brent's method** for well-separated data (2-3× faster), **binary search** for weak/small-n cases. All three methods (`auto`, `binary`, `brent`) produce consistent results.
 
 ### Multi-Format Data Loading
 
