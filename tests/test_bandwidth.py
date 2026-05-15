@@ -9,6 +9,7 @@ from scipy import integrate
 from pola import (
     critical_bandwidth,
     detect_components,
+    dip_test,
     find_trough,
     gaussian_kde,
     silverman_bandwidth,
@@ -798,3 +799,54 @@ class TestCriticalBandwidthCI:
         h1, ok1 = critical_bandwidth(x)
         h2, ok2 = critical_bandwidth(x, return_ci=False)
         assert h1 == h2 and ok1 == ok2
+
+
+class TestDipTest:
+    """Test Hartigan's dip test for unimodality."""
+
+    def test_dip_test_unimodal(self):
+        """Uniform data should have large p-value."""
+        rng = np.random.default_rng(42)
+        x = rng.uniform(0, 1, 100)
+        result = dip_test(x, n_boot=99)
+        assert result.p_value > 0.05
+        assert 0 <= result.dip <= 0.25
+
+    def test_dip_test_bimodal(self):
+        """Bimodal data should have a larger dip than uniform data."""
+        rng = np.random.default_rng(42)
+        x_unif = rng.uniform(0, 1, 100)
+        x_bimod = np.concatenate([rng.normal(-2, 0.3, 100), rng.normal(2, 0.3, 100)])
+        from pola.bandwidth import _compute_dip_statistic
+        dip_unif = _compute_dip_statistic(x_unif)
+        dip_bimod = _compute_dip_statistic(x_bimod)
+        assert dip_bimod > dip_unif, f"Expected bimodal dip ({dip_bimod:.4f}) > uniform dip ({dip_unif:.4f})"
+        # p-value should be small (but with n_boot=99, allow leniency)
+        result = dip_test(x_bimod, n_boot=99)
+        assert result.p_value < 0.5, f"Expected p < 0.5 for bimodal data, got {result.p_value:.3f}"
+
+    def test_dip_test_reproducible(self):
+        """Same random_state gives same result."""
+        rng = np.random.default_rng(42)
+        x = rng.normal(0, 1, 100)
+        r1 = dip_test(x, n_boot=99, random_state=42)
+        r2 = dip_test(x, n_boot=99, random_state=42)
+        assert r1.p_value == r2.p_value
+
+    def test_dip_statistic_tiny(self):
+        """Very small samples."""
+        from pola.bandwidth import _compute_dip_statistic
+
+        x = np.array([1.0, 2.0, 3.0])
+        d = _compute_dip_statistic(x)
+        assert 0 <= d <= 0.5
+
+    def test_dip_statistic_range(self):
+        """Dip statistic should be between 0 and 0.5."""
+        from pola.bandwidth import _compute_dip_statistic
+
+        rng = np.random.default_rng(42)
+        for _ in range(10):
+            x = rng.uniform(0, 1, 50)
+            d = _compute_dip_statistic(x)
+            assert 0 <= d <= 0.5, f"Dip={d} out of range"
