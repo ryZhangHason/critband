@@ -26,57 +26,57 @@ benchmark_cases <- list(
     pola_h = 1.8631
   ),
   moderate_separation = list(
-    gen = function(s) generate_mixture(rbind(c(-1,0.5,250), c(1.5,0.5,250)), s),
+    gen = function(s) generate_mixture(rbind(c(-1,0.5,250), c(1.5,0.5,250)), s+1),
     desc = "N(-1,0.5) ∪ N(1.5,0.5), n=500",
     pola_h = 1.0953
   ),
   barely_separated = list(
-    gen = function(s) generate_mixture(rbind(c(-0.5,0.4,300), c(0.5,0.4,300)), s),
+    gen = function(s) generate_mixture(rbind(c(-0.5,0.4,300), c(0.5,0.4,300)), s+2),
     desc = "N(-0.5,0.4) ∪ N(0.5,0.4), n=600",
     pola_h = 0.2788
   ),
   unequal_variance = list(
-    gen = function(s) generate_mixture(rbind(c(-2,0.6,200), c(2,0.2,200)), s),
+    gen = function(s) generate_mixture(rbind(c(-2,0.6,200), c(2,0.2,200)), s+3),
     desc = "N(-2,0.6) ∪ N(2,0.2), n=400",
     pola_h = 1.7831
   ),
   unequal_weights = list(
-    gen = function(s) generate_mixture(rbind(c(-2,0.3,100), c(2,0.3,400)), s),
+    gen = function(s) generate_mixture(rbind(c(-2,0.3,100), c(2,0.3,400)), s+4),
     desc = "N(-2,0.3,100) ∪ N(2,0.3,400), n=500",
     pola_h = 1.2592
   ),
   extreme_separation = list(
-    gen = function(s) generate_mixture(rbind(c(-5,0.5,200), c(5,0.5,200)), s),
+    gen = function(s) generate_mixture(rbind(c(-5,0.5,200), c(5,0.5,200)), s+5),
     desc = "N(-5,0.5) ∪ N(5,0.5), n=400",
     pola_h = 4.6940
   ),
   trimodal = list(
-    gen = function(s) generate_mixture(rbind(c(-3,0.3,150), c(0,0.3,150), c(3,0.3,150)), s),
+    gen = function(s) generate_mixture(rbind(c(-3,0.3,150), c(0,0.3,150), c(3,0.3,150)), s+6),
     desc = "3× N(±3,0.3,150), n=450",
     pola_h = 1.3810
   ),
   skewed_bimodal = list(
-    gen = function(s) generate_mixture(rbind(c(-1.5,0.4,350), c(2.0,0.6,150)), s),
+    gen = function(s) generate_mixture(rbind(c(-1.5,0.4,350), c(2.0,0.6,150)), s+7),
     desc = "N(-1.5,0.4,350) ∪ N(2.0,0.6,150)",
     pola_h = 1.1416
   ),
   heavy_tailed_bimodal = list(
-    gen = function(s) generate_mixture(rbind(c(-3,0.8,200), c(3,0.8,200)), s),
+    gen = function(s) generate_mixture(rbind(c(-3,0.8,200), c(3,0.8,200)), s+8),
     desc = "N(-3,0.8) ∪ N(3,0.8), n=400",
     pola_h = 2.7082
   ),
   near_unimodal = list(
-    gen = function(s) generate_mixture(rbind(c(0,0.6,300), c(1.5,0.6,300)), s),
+    gen = function(s) generate_mixture(rbind(c(0,0.6,300), c(1.5,0.6,300)), s+9),
     desc = "N(0,0.6,300) ∪ N(1.5,0.6,300)",
     pola_h = 0.4182
   ),
   small_sample_bimodal = list(
-    gen = function(s) generate_mixture(rbind(c(-2,0.5,30), c(2,0.5,30)), s),
+    gen = function(s) generate_mixture(rbind(c(-2,0.5,30), c(2,0.5,30)), s+10),
     desc = "N(-2,0.5,30) ∪ N(2,0.5,30), n=60",
     pola_h = 1.8608
   ),
   overlapping_variances = list(
-    gen = function(s) generate_mixture(rbind(c(-0.8,0.7,250), c(0.8,0.5,250)), s),
+    gen = function(s) generate_mixture(rbind(c(-0.8,0.7,250), c(0.8,0.5,250)), s+11),
     desc = "N(-0.8,0.7,250) ∪ N(0.8,0.5,250)",
     pola_h = 0.4593
   )

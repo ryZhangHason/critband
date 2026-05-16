@@ -5,21 +5,37 @@ authors = [
   { name = "Ruiyu Zhang" },
   { name = "Qihao Wang" },
 ]
+maintainers = [
+  { name = "Ruiyu Zhang" },
+  { name = "Qihao Wang" },
+]
 description = "Calculate critical bandwidth for bimodal distributions in kernel density estimation"
 readme = "README.md"
 license = "Apache-2.0"
+keywords = [
+    "bimodality",
+    "critical bandwidth",
+    "kernel density estimation",
+    "Silverman test",
+    "dip test",
+    "multimodality",
+    "statistics",
+]
 requires-python = ">=3.10"
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Mathematics",
-    "Topic :: Scientific/Engineering :: Information Analysis"
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Typing :: Typed",
 ]
 dependencies = [
     "numpy>=1.21",
@@ -48,8 +64,10 @@ jupyter = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/ryZhangHason/Polarization-CBW"
+Homepage = "https://github.com/ryZhangHason/Polarization-CBW"
 "Bug Tracker" = "https://github.com/ryZhangHason/Polarization-CBW/issues"
+Documentation = "https://github.com/ryZhangHason/Polarization-CBW"
+Source = "https://github.com/ryZhangHason/Polarization-CBW"
 
 [build-system]
 requires = ["setuptools >= 61.0"]
