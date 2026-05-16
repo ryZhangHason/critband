@@ -4,8 +4,6 @@
 
 It finds the smallest bandwidth where a KDE transitions from bimodal to unimodal — a well-established statistical test for modality.
 
-> **Web App**: Try pola in your browser at **[qhwangantoneva.github.io/pola](https://qhwangantoneva.github.io/pola/)** — no installation required. All computation runs in-browser via Pyodide (WebAssembly). Your data never leaves your machine.
-
 ## Quick Start
 
 ```bash
@@ -96,9 +94,9 @@ cols = read_data("data.csv", return_all=True)
 # cols = {"x": array([...]), "y": array([...])}
 ```
 
-### Web-Ready Buffer API
+### Buffer API
 
-Works with file uploads from web frameworks (Flask, FastAPI, Django, Streamlit):
+Works with in-memory file buffers for pipeline and service integration:
 
 ```python
 from pola.io import read_buffer
@@ -180,7 +178,7 @@ uv run python -m pytest tests/ -v
 - **Any-file input**: 9 formats from a single API. CSV, Excel, PDF, Word, JSON, HTML, Markdown — just point `read_data` at the file and go.
 - **One-command install**: `pip install pola` installs everything. No system packages, no manual steps, no Tesseract OCR.
 - **Pure Python dependencies**: All 4 additional libraries (openpyxl, xlrd, python-docx, pdfplumber) are pure Python — no compiled extensions.
-- **Built for production and research**: Works in CLI scripts, Jupyter notebooks, and web applications equally well.
+- **Built for production and research**: Works in CLI scripts and Jupyter notebooks equally well.
 
 ## Example: Bimodality Test
 
@@ -282,7 +280,6 @@ Compares `pola` against R's `multimode`, `diptest`, and `ks` packages across 12 
 | **Hartigan's dip test** | ✅ | ❌ | ✅ | Tie |
 | **Component decomposition** | ✅ | ❌ | ❌ | **pola** |
 | **9-format I/O** | ✅ | ❌ | ❌ | **pola** |
-| **Web browser (Pyodide)** | ✅ | ❌ | ❌ | **pola** |
 | **Dependencies** | Pure Python | R + compiled | R + compiled | **pola** |
 
 ### Quantitative Results ($h_{\text{crit}}$ Accuracy)
