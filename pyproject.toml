@@ -5,10 +5,7 @@ authors = [
   { name = "Ruiyu Zhang" },
   { name = "Qihao Wang" },
 ]
-maintainers = [
-  { name = "Ruiyu Zhang" },
-  { name = "Qihao Wang" },
-]
+
 description = "Calculate critical bandwidth for bimodal distributions in kernel density estimation"
 readme = "README.md"
 license = "Apache-2.0"
@@ -41,6 +38,7 @@ dependencies = [
     "openpyxl>=3.1",
     "pdfplumber>=0.11",
     "python-docx>=1.1",
+    "scikit-learn>=1.7.2",
     "scipy>=1.7",
     "xlrd>=2.0",
 ]
