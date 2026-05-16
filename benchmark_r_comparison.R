@@ -12,7 +12,8 @@ set.seed(42)
 generate_mixture <- function(components, seed) {
   set.seed(seed)
   result <- c()
-  for (comp in components) {
+  for (i in seq_len(nrow(components))) {
+    comp <- components[i, ]
     result <- c(result, rnorm(comp[3], comp[1], comp[2]))
   }
   return(result)
@@ -109,13 +110,16 @@ run_diptest <- function(x) {
 
 # ---- Helper: nmodes estimation ----
 run_nmodes <- function(x) {
+  # nmodes now requires bw; use Silverman's rule (nrd0) — matches pola's default
+  bw <- bw.nrd0(x)
   t <- system.time({
-    result <- nmodes(x)
+    result <- tryCatch(nmodes(x, bw=bw), error=function(e) NA_integer_)
   })
-  list(
-    n_modes = result$nmodes,
-    time = t["elapsed"]
-  )
+  if (is.na(result)) {
+    list(n_modes = NA, time = NA)
+  } else {
+    list(n_modes = result, time = t["elapsed"])
+  }
 }
 
 # ---- Main benchmark loop ----
