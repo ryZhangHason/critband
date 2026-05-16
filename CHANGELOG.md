@@ -5,7 +5,40 @@ All notable changes to **pola** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] - 2026-05-15
+## [0.1.1] - 2026-05-16
+
+### Added
+- **Phase 2: 15 new public API functions and classes**:
+  - `dip_test()` — Hartigan's dip test for unimodality
+  - `silverman_test()` — Silverman's bootstrap bimodality test
+  - `find_modes()` — multi-mode detection with `Mode`/`ModeResult` dataclasses
+  - `gaussian_kde_fft()` — explicit FFT-accelerated KDE ($O(g \log g)$)
+  - `bimodality_strength()` — continuous bimodality strength score
+  - `excess_mass()` — Müller-Sawitzki excess mass multimodality test
+  - `critical_bandwidth(k=...)` — k-mode detection for arbitrary $k \geq 1$
+  - `return_ci` option on `critical_bandwidth()` — bootstrap confidence intervals
+  - `method="auto"` — hybrid binary-Brent solver with automatic fallback
+  - Auto-switch to FFT KDE at $n > 5000$
+  - Adaptive grid sizing: $g = \max(800, \min(5000, n/2))$
+  - Numerical stability: `errstate`, empty-bootstrap guards, constant-data floor
+- **5 new benchmark cases** (total 12):
+  - `skewed_bimodal`, `heavy_tailed_bimodal`, `near_unimodal`
+  - `small_sample_bimodal`, `overlapping_variances`
+- **12 validation cases** with R cross-comparison against `multimode`/`diptest` packages
+- **Phase 3 R1**: `benchmark_r_comparison.R` — R benchmark and p-value script
+- **Phase 3 R3**: Sphinx documentation with furo theme
+  - Quick Start guide, API reference, R comparison page, development guide
+  - GitHub Actions auto-deploy workflow (`docs.yml`)
+- **Test count**: 274 tests (~96% line coverage)
+
+### Changed
+- Bumped version to 0.1.1 (includes Phase 2 features + documentation infrastructure)
+- Enhanced `pyproject.toml` metadata: Beta status classifiers, keywords
+- Updated README with R benchmark comparison tables and theoretical background
+- `gaussian_kde()` now sports `use_fft=None` (auto) / `use_fft=True` (force) / `use_fft=False` (force direct)
+
+### Fixed
+- `count_modes` robustified: minimum peak prominence threshold filters spurious undulations
 
 ### Added
 - `paper.md` — JOSS paper draft with abstract, statement of need, and references
