@@ -42,7 +42,7 @@ print(f"Converged: {success}")
 | `silverman_test(x)` | Silverman's bootstrap test for bimodality; returns `SilvermanTestResult` dataclass |
 | `excess_mass(x)` | Müller & Sawitzki excess mass test for multimodality; detects any number of modes, returns `ExcessMassResult` |
 
-The `critical_bandwidth` function uses automatic method selection: **Brent's method** for well-separated data (2-3× faster), **binary search** for weak/small-n cases. All three methods (`auto`, `binary`, `brent`) produce consistent results.
+The `critical_bandwidth` function uses automatic method selection: **Brent's method** for well-separated data (converges in fewer iterations), **binary search** for weak/small-n cases. All three methods (`auto`, `binary`, `brent`) produce consistent results.
 
 ### Multi-Format Data Loading
 
@@ -124,7 +124,7 @@ This is used as the baseline for the critical bandwidth search: the solver searc
 
 The critical bandwidth is found via **binary search** on KDE mode counts (for any k). The solver:
 1. Automatically computes bounds from Silverman's rule: $[h_{\text{silverman}}/20, 10 \cdot h_{\text{silverman}}]$
-2. Uses `method="auto"` (default): Brent's method for large, well-separated data (2-3× faster); binary search for weak/small-n cases
+2. Uses `method="auto"` (default): Brent's method for large, well-separated data (fewer iterations); binary search for weak/small-n cases
 3. For k > 2, `critical_bandwidth(x, k=3)` finds the bandwidth where trimodality disappears, etc.
 4. Optionally returns a bootstrap confidence interval via `return_ci=True`
 
@@ -266,21 +266,21 @@ uv run python examples/benchmark_performance.py --output results.csv
 
 ## Phase 3 — R Package Comparison
 
-Compares `pola` against R's `multimode`, `diptest`, and `ks` packages across 12 benchmark cases (seed=42, unique per case).
+Compares `pola` against R's `multimode`, `diptest`, and `ks` packages across 12 benchmark cases.
 
 ### Feature Comparison
 
-| Feature | pola | multimode | diptest | Advantage |
-|---------|:----:|:---------:|:-------:|-----------|
-| Critical bandwidth | ✅ ($k \ge 2$) | ✅ ($k = 2$ only) | ❌ | **pola** |
-| **k-mode detection** | ✅ (any $k$) | ❌ | ❌ | **pola** |
-| **Bimodality strength** | ✅ (interpretable) | ❌ | ❌ | **pola** |
-| **Excess mass test** | ✅ | ✅ | ❌ | Tie |
-| **Silverman's bootstrap test** | ✅ | ✅ | ❌ | Tie |
-| **Hartigan's dip test** | ✅ | ❌ | ✅ | Tie |
-| **Component decomposition** | ✅ | ❌ | ❌ | **pola** |
-| **9-format I/O** | ✅ | ❌ | ❌ | **pola** |
-| **Dependencies** | Pure Python | R + compiled | R + compiled | **pola** |
+| Feature | pola | multimode | diptest |
+|---------|:----:|:---------:|:-------:|
+| Critical bandwidth | ✅ ($k \ge 2$) | ✅ ($k = 2$ only) | ❌ |
+| **k-mode detection** | ✅ (any $k$) | ❌ | ❌ |
+| **Bimodality strength** | ✅ (interpretable) | ❌ | ❌ |
+| **Excess mass test** | ✅ | ✅ | ❌ |
+| **Silverman's bootstrap test** | ✅ | ✅ | ❌ |
+| **Hartigan's dip test** | ✅ | ❌ | ✅ |
+| **Component decomposition** | ✅ | ❌ | ❌ |
+| **9-format I/O** | ✅ | ❌ | ❌ |
+| **Dependencies** | Pure Python | R + compiled | R + compiled |
 
 ### Quantitative Results ($h_{\text{crit}}$ Accuracy)
 
@@ -303,13 +303,13 @@ pola achieves **<0.5% mean absolute relative error** vs high-precision reference
 
 ### Performance Comparison (median runtime per case)
 
-| Operation | pola | R (`multimode`/`diptest`) | Speedup |
+| Operation | pola | R (`multimode`/`diptest`) | Comparison |
 |-----------|:----:|:-------------------------:|:-------:|
-| `critical_bandwidth` | 0.04–0.79 s | 0.82–1.58 s | **3–10× faster** |
-| `find_modes` (mode counting) | <0.01 s | 0.03–0.05 s | Tie |
-| `dip_test` | ~0.002 s | ~0.002 s | Tie |
+| `critical_bandwidth` | 0.04–0.79 s | 0.82–1.58 s | **3–10× difference** |
+| `find_modes` (mode counting) | <0.01 s | 0.03–0.05 s | Comparable |
+| `dip_test` | ~0.002 s | ~0.002 s | Comparable |
 
-pola's performance advantage stems from a pure-Python numerical stack (NumPy/SciPy) without the overhead of compiled R package dispatch, and from adaptive grid sizing that avoids over-resolving the KDE for large samples.
+The runtime difference reflects pola's pure-Python numerical stack (NumPy/SciPy) and adaptive grid sizing, compared to R's compiled package dispatch overhead with bootstrap calibration (`modetest(B = 199)`).
 
 ## License
 
