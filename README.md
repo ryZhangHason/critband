@@ -38,11 +38,10 @@ print(f"Converged: {success}")
 | `find_trough(x, h)` | Find valley between the two highest KDE peaks; returns x-coordinate or `None` |
 | `detect_components(x)` | Decompose bimodal distribution into two Gaussian components; returns `BimodalDecomposition` |
 | `bimodality_strength(x)` | Comprehensive bimodality assessment; returns interpretable strength label + score in `BimodalityStrength` |
-| `dip_test(x)` | Hartigan's dip test for unimodality; returns `DipTestResult` dataclass |
 | `silverman_test(x)` | Silverman's bootstrap test for bimodality; returns `SilvermanTestResult` dataclass |
 | `excess_mass(x)` | Müller & Sawitzki excess mass test for multimodality; detects any number of modes, returns `ExcessMassResult` |
 
-The `critical_bandwidth` function uses automatic method selection: **Brent's method** for well-separated data (converges in fewer iterations), **binary search** for weak/small-n cases. All three methods (`auto`, `binary`, `brent`) produce consistent results.
+The `critical_bandwidth` function uses automatic method selection: **Brent's method** for well-separated data (converges in fewer iterations), **binary search** for weak/small-n cases. All three methods (`auto`, `binary`, `brent`) produce consistent results. Hartigan's dip test is included as a complementary unimodality check, not as a core differentiator of the package.
 
 ### Multi-Format Data Loading
 
@@ -128,7 +127,7 @@ The critical bandwidth is found via **binary search** on KDE mode counts (for an
 3. For k > 2, `critical_bandwidth(x, k=3)` finds the bandwidth where trimodality disappears, etc.
 4. Optionally returns a bootstrap confidence interval via `return_ci=True`
 
-The `dip_ratio` (via `_trough_ratio`) is available as a descriptive bimodality strength measure but is not used as the optimizer objective.
+The `dip_ratio` (via `_trough_ratio`) is available as a descriptive bimodality strength measure but is not used as the optimizer objective. Hartigan's dip test is included as a complementary unimodality check, not as a core differentiator of the package.
 
 ### Excess Mass Test
 
@@ -277,7 +276,7 @@ Compares `pola` against R's `multimode`, `diptest`, and `ks` packages across 12 
 | **Bimodality strength** | ✅ (interpretable) | ❌ | ❌ |
 | **Excess mass test** | ✅ | ✅ | ❌ |
 | **Silverman's bootstrap test** | ✅ | ✅ | ❌ |
-| **Hartigan's dip test** | ✅ | ❌ | ✅ |
+| **Hartigan's dip test** | ✅ | ❌ | ✅ | Complementary check |
 | **Component decomposition** | ✅ | ❌ | ❌ |
 | **9-format I/O** | ✅ | ❌ | ❌ |
 | **Dependencies** | Pure Python | R + compiled | R + compiled |

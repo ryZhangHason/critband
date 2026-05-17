@@ -1,5 +1,5 @@
 [project]
-name = "pola"
+name = "critband"
 version = "0.1.1"
 authors = [
   { name = "Ruiyu Zhang" },
