@@ -1,12 +1,12 @@
-# pola — Critical Bandwidth for Bimodal Distributions
+# critband 0.2.0 — Critical Bandwidth for Bimodal Distributions
 
-**critband** is the package name for this release. `pola` is now the legacy compatibility name.
+`critband` is the release name for `v0.2.0` on GitHub and PyPI.
 
-Release target: `v0.2.0` on GitHub and PyPI under `critband`.
-
-**critband** is a Python package for detecting whether a distribution is **meaningfully bimodal** using the **critical bandwidth** method in kernel density estimation (KDE).
+`critband` is a Python package for detecting whether a distribution is **meaningfully bimodal** using the **critical bandwidth** method in kernel density estimation (KDE).
 
 It finds the smallest bandwidth where a KDE transitions from bimodal to unimodal — a well-established statistical test for modality.
+
+Legacy compatibility: `pola` remains available as the historical package name for existing code.
 
 ## Quick Start
 
@@ -267,9 +267,9 @@ uv run python examples/benchmark_performance.py --runs 10 --sizes 100 500 2000
 uv run python examples/benchmark_performance.py --output results.csv
 ```
 
-## Phase 3 — R Package Comparison
+## Historical Validation: R Package Comparison
 
-Compares `critband` against R's `multimode`, `diptest`, and `ks` packages across 12 benchmark cases.
+This section records validation against R's `multimode`, `diptest`, and `ks` packages across 12 benchmark cases.
 
 ### Feature Comparison
 
@@ -302,7 +302,7 @@ Compares `critband` against R's `multimode`, `diptest`, and `ks` packages across
 | Small sample bimodal | 60 | 1.8608 | 0.000 | 0.000 | ✅ Both detect bimodality (small $n$) |
 | Overlapping variances | 500 | 0.4598 | 0.045 | 0.322 | ✅ critband flags weak; R agrees (n.s.) |
 
-critband achieves **<0.5% mean absolute relative error** vs high-precision reference values across all 12 cases.
+Across these benchmark cases, `critband` achieves **<0.5% mean absolute relative error** vs high-precision reference values.
 
 ### Performance Comparison (median runtime per case)
 
@@ -312,7 +312,7 @@ critband achieves **<0.5% mean absolute relative error** vs high-precision refer
 | `find_modes` (mode counting) | <0.01 s | 0.03–0.05 s | Comparable |
 | `dip_test` | ~0.002 s | ~0.002 s | Comparable |
 
-The runtime difference reflects critband's pure-Python numerical stack (NumPy/SciPy) and adaptive grid sizing, compared to R's compiled package dispatch overhead with bootstrap calibration (`modetest(B = 199)`).
+The runtime difference reflects `critband`'s pure-Python numerical stack (NumPy/SciPy) and adaptive grid sizing, compared to R's compiled package dispatch overhead with bootstrap calibration (`modetest(B = 199)`).
 
 ## License
 
