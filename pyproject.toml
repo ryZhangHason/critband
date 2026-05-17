@@ -1,6 +1,6 @@
 [project]
-name = "pola"
-version = "0.1.2"
+name = "critband"
+version = "0.2.0"
 authors = [
   { name = "Ruiyu Zhang" },
   { name = "Qihao Wang" },
