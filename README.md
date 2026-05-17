@@ -1,6 +1,6 @@
-# critband 0.2.0 — Critical Bandwidth for Bimodal Distributions
+# critband 0.2.1 — Critical Bandwidth for Bimodal Distributions
 
-`critband` is the release name for `v0.2.0` on GitHub and PyPI.
+`critband` is the release name for `v0.2.1` on GitHub and PyPI.
 
 `critband` is a Python package for detecting whether a distribution is **meaningfully bimodal** using the **critical bandwidth** method in kernel density estimation (KDE).
 
