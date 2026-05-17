@@ -1,6 +1,6 @@
 # pola — Critical Bandwidth for Bimodal Distributions
 
-**pola** is the package name for this release. `critband` is the next rename we are preparing for after this final maintenance pass.
+**pola** is the package name for this release. `critband` is the next rename we are preparing for after this final maintenance pass, including the public GitHub page.
 
 Release target: `v0.1.2` on GitHub and PyPI under `pola`.
 
