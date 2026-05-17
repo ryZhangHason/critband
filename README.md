@@ -1,10 +1,10 @@
-# critband 0.2.1 — Critical Bandwidth for Bimodal Distributions
+# critband 0.2.1 — Critical Bandwidth Analysis of Multimodal Distributions
 
 `critband` is the release name for `v0.2.1` on GitHub and PyPI.
 
-`critband` is a Python package for detecting whether a distribution is **meaningfully bimodal** using the **critical bandwidth** method in kernel density estimation (KDE).
+`critband` is a Python package for analyzing **critical bandwidth** and related multimodality structure in kernel density estimation (KDE).
 
-It finds the smallest bandwidth where a KDE transitions from bimodal to unimodal — a well-established statistical test for modality.
+It finds the smallest bandwidth where a KDE transitions from `k`-modal to fewer modes, and it also exposes related summaries such as `bimodality_strength()` and `excess_mass()`.
 
 Legacy compatibility: `pola` remains available as the historical package name for existing code.
 
@@ -174,10 +174,14 @@ uv run python -m pytest tests/ -v
 - Test only (not needed at runtime): pytest, pytest-cov, xlwt, reportlab
 - Visualization (optional): matplotlib >= 3.5
 
+## Current validation status
+
+WS1 calibration has been run on the fixed design grid and is kept as a validation artifact only. The result is useful for implementation review, but it does not yet justify calibrated threshold language in the paper.
+
 ## Why critband?
 
-- **Zero-config modality testing**: One function call tells you whether your distribution is bimodal, with a well-defined threshold. Or use `bimodality_strength()` for an interpretable strength score, or `excess_mass()` to estimate how many modes your data has.
-- **k-mode detection**: `critical_bandwidth(x, k=3)` detects the bandwidth where trimodality disappears — generalize to any k.
+- **Critical bandwidth analysis**: One function call computes the critical bandwidth for `k`-mode structure, and you can use `bimodality_strength()` as a descriptive score or `excess_mass()` to estimate how many modes your data has.
+- **k-mode detection**: `critical_bandwidth(x, k=3)` detects the bandwidth where trimodality disappears and generalizes to any `k`.
 - **Any-file input**: 9 formats from a single API. CSV, Excel, PDF, Word, JSON, HTML, Markdown — just point `read_data` at the file and go.
 - **One-command install**: `pip install critband` installs everything. No system packages, no manual steps, no Tesseract OCR.
 - **Pure Python dependencies**: All 4 additional libraries (openpyxl, xlrd, python-docx, pdfplumber) are pure Python — no compiled extensions.
