@@ -1,18 +1,22 @@
-# pola — Critical Bandwidth for Bimodal Distributions
+# critband — Critical Bandwidth for Bimodal Distributions
 
-**pola** is a Python package for detecting whether a distribution is **meaningfully bimodal** using the **critical bandwidth** method in kernel density estimation (KDE).
+**critband** is the package name for this project. `pola` is kept only as a legacy compatibility name during the transition.
+
+Release target: `v0.1.2` on GitHub and PyPI under `critband`.
+
+**critband** is a Python package for detecting whether a distribution is **meaningfully bimodal** using the **critical bandwidth** method in kernel density estimation (KDE).
 
 It finds the smallest bandwidth where a KDE transitions from bimodal to unimodal — a well-established statistical test for modality.
 
 ## Quick Start
 
 ```bash
-pip install pola
+pip install critband
 ```
 
 ```python
 import numpy as np
-from pola import critical_bandwidth
+from critband import critical_bandwidth
 
 # Generate bimodal data
 x = np.concatenate([np.random.normal(-2, 0.5, 200),
@@ -48,7 +52,7 @@ The `critical_bandwidth` function uses automatic method selection: **Brent's met
 Read data from **9 file formats** without learning separate tools:
 
 ```python
-from pola.io import read_data
+from critband.io import read_data
 
 # Auto-detect — just point at any supported file
 x = read_data("measurements.csv")
@@ -69,12 +73,12 @@ y = read_data("report.docx", column=0, return_all=False)
 | Word (tables) | `.docx` | `python-docx` |
 | PDF (tables) | `.pdf` | `pdfplumber` |
 
-All dependencies are **declared in pyproject.toml** — `pip install pola` installs everything automatically. No system-level tools required.
+All dependencies are **declared in pyproject.toml** — `pip install critband` installs everything automatically. No system-level tools required.
 
 ### Column / Sheet Selection
 
 ```python
-from pola.io import read_data, read_buffer
+from critband.io import read_data, read_buffer
 
 # By sheet name (Excel, PDF, Markdown multi-section)
 x = read_data("data.xlsx", sheet="Measurements")
@@ -98,7 +102,7 @@ cols = read_data("data.csv", return_all=True)
 Works with in-memory file buffers for pipeline and service integration:
 
 ```python
-from pola.io import read_buffer
+from critband.io import read_buffer
 
 # From a BytesIO object
 buf = io.BytesIO(uploaded_file.read())
@@ -151,10 +155,10 @@ The `excess_mass` function implements the Müller & Sawitzki (1991) test for mul
 
 ```bash
 # From PyPI
-pip install pola
+pip install critband
 
 # Or using uv
-uv add pola
+uv add critband
 
 # Development
 git clone https://github.com/ryZhangHason/Polarization-CBW.git
@@ -170,12 +174,12 @@ uv run python -m pytest tests/ -v
 - Test only (not needed at runtime): pytest, pytest-cov, xlwt, reportlab
 - Visualization (optional): matplotlib >= 3.5
 
-## Why pola?
+## Why critband?
 
 - **Zero-config modality testing**: One function call tells you whether your distribution is bimodal, with a well-defined threshold. Or use `bimodality_strength()` for an interpretable strength score, or `excess_mass()` to estimate how many modes your data has.
 - **k-mode detection**: `critical_bandwidth(x, k=3)` detects the bandwidth where trimodality disappears — generalize to any k.
 - **Any-file input**: 9 formats from a single API. CSV, Excel, PDF, Word, JSON, HTML, Markdown — just point `read_data` at the file and go.
-- **One-command install**: `pip install pola` installs everything. No system packages, no manual steps, no Tesseract OCR.
+- **One-command install**: `pip install critband` installs everything. No system packages, no manual steps, no Tesseract OCR.
 - **Pure Python dependencies**: All 4 additional libraries (openpyxl, xlrd, python-docx, pdfplumber) are pure Python — no compiled extensions.
 - **Built for production and research**: Works in CLI scripts and Jupyter notebooks equally well.
 
@@ -183,7 +187,7 @@ uv run python -m pytest tests/ -v
 
 ```python
 import numpy as np
-from pola import critical_bandwidth, bimodality_strength, excess_mass
+from critband import critical_bandwidth, bimodality_strength, excess_mass
 
 # Unimodal data — the function tells you it's already unimodal
 unimodal = np.random.normal(0, 1, 500)
@@ -265,11 +269,11 @@ uv run python examples/benchmark_performance.py --output results.csv
 
 ## Phase 3 — R Package Comparison
 
-Compares `pola` against R's `multimode`, `diptest`, and `ks` packages across 12 benchmark cases.
+Compares `critband` against R's `multimode`, `diptest`, and `ks` packages across 12 benchmark cases.
 
 ### Feature Comparison
 
-| Feature | pola | multimode | diptest |
+| Feature | critband | multimode | diptest |
 |---------|:----:|:---------:|:-------:|
 | Critical bandwidth | ✅ ($k \ge 2$) | ✅ ($k = 2$ only) | ❌ |
 | **k-mode detection** | ✅ (any $k$) | ❌ | ❌ |
@@ -283,32 +287,32 @@ Compares `pola` against R's `multimode`, `diptest`, and `ks` packages across 12 
 
 ### Quantitative Results ($h_{\text{crit}}$ Accuracy)
 
-| Case | $n$ | pola $h_{\text{crit}}$ | R `modetest` $p$ | R `dip.test` $p$ | Agreement |
+| Case | $n$ | critband $h_{\text{crit}}$ | R `modetest` $p$ | R `dip.test` $p$ | Agreement |
 |------|:---:|:---------------------:|:----------------:|:-----------------:|:---------:|
 | Well-separated | 400 | 1.8650 | 0.000 | 0.000 | ✅ Both detect bimodality |
 | Moderate separation | 500 | 1.0964 | 0.000 | 0.000 | ✅ Both detect bimodality |
-| Barely separated | 600 | 0.2791 | 0.251 | 0.709 | ✅ pola flags weak bimodality, R agrees (n.s.) |
+| Barely separated | 600 | 0.2791 | 0.251 | 0.709 | ✅ critband flags weak bimodality, R agrees (n.s.) |
 | Unequal variance | 400 | 1.7849 | 0.000 | 0.000 | ✅ Both detect bimodality |
-| Unequal weights | 500 | 1.2591 | 0.000 | 0.000 | ✅ pola correct; R yields spurious 772 modes |
+| Unequal weights | 500 | 1.2591 | 0.000 | 0.000 | ✅ critband correct; R yields spurious 772 modes |
 | Extreme separation | 400 | 4.6987 | 0.000 | 0.000 | ✅ Both detect bimodality |
-| Trimodal | 450 | 1.3824 | 0.000 | 0.000 | ✅ pola finds $k=3$; R detects multimodality |
+| Trimodal | 450 | 1.3824 | 0.000 | 0.000 | ✅ critband finds $k=3$; R detects multimodality |
 | Skewed bimodal | 500 | 1.1417 | 0.000 | 0.000 | ✅ Both detect bimodality |
 | Heavy-tailed bimodal | 400 | 2.7109 | 0.000 | 0.000 | ✅ Both detect bimodality |
-| Near unimodal | 600 | 0.4186 | 0.055 | 0.285 | ✅ pola flags weak; R agrees (n.s.) |
+| Near unimodal | 600 | 0.4186 | 0.055 | 0.285 | ✅ critband flags weak; R agrees (n.s.) |
 | Small sample bimodal | 60 | 1.8608 | 0.000 | 0.000 | ✅ Both detect bimodality (small $n$) |
-| Overlapping variances | 500 | 0.4598 | 0.045 | 0.322 | ✅ pola flags weak; R agrees (n.s.) |
+| Overlapping variances | 500 | 0.4598 | 0.045 | 0.322 | ✅ critband flags weak; R agrees (n.s.) |
 
-pola achieves **<0.5% mean absolute relative error** vs high-precision reference values across all 12 cases.
+critband achieves **<0.5% mean absolute relative error** vs high-precision reference values across all 12 cases.
 
 ### Performance Comparison (median runtime per case)
 
-| Operation | pola | R (`multimode`/`diptest`) | Comparison |
+| Operation | critband | R (`multimode`/`diptest`) | Comparison |
 |-----------|:----:|:-------------------------:|:-------:|
 | `critical_bandwidth` | 0.04–0.79 s | 0.82–1.58 s | **3–10× difference** |
 | `find_modes` (mode counting) | <0.01 s | 0.03–0.05 s | Comparable |
 | `dip_test` | ~0.002 s | ~0.002 s | Comparable |
 
-The runtime difference reflects pola's pure-Python numerical stack (NumPy/SciPy) and adaptive grid sizing, compared to R's compiled package dispatch overhead with bootstrap calibration (`modetest(B = 199)`).
+The runtime difference reflects critband's pure-Python numerical stack (NumPy/SciPy) and adaptive grid sizing, compared to R's compiled package dispatch overhead with bootstrap calibration (`modetest(B = 199)`).
 
 ## License
 

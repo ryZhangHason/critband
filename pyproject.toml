@@ -1,6 +1,6 @@
 [project]
 name = "critband"
-version = "0.1.1"
+version = "0.1.2"
 authors = [
   { name = "Ruiyu Zhang" },
   { name = "Qihao Wang" },
@@ -73,7 +73,7 @@ requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["pola", "pola.*"]
+include = ["critband", "critband.*", "pola", "pola.*"]
 
 [tool.ruff]
 target-version = "py310"
@@ -91,4 +91,4 @@ quote-style = "double"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-v --cov=pola --cov-report=term-missing"
+addopts = "-v --cov=critband --cov=pola --cov-report=term-missing"
