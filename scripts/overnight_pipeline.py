@@ -88,7 +88,7 @@ def run_r5():
         for func_name, func, args in [
             ("critical_bandwidth", pola.critical_bandwidth, ((data,), {"method": "auto"})),
             ("find_modes", pola.find_modes, ((data,), {"h": h_silv})),
-            ("dip_test", pola.dip_test, ((data,), {})),
+            # dip_test excluded: O(n²) Hartigan's dip, takes ~75 min per call on n=400-600 data
         ]:
             times = []
             for _ in range(N_TIMING_ITERS):
@@ -132,7 +132,7 @@ def run_r3():
             mr = pola.find_modes(data, h=h_silv)
             n_modes_list.append(mr.n_modes)
             bs = pola.bimodality_strength(data)
-            bs_list.append(bs)
+            bs_list.append(bs.strength_score)
             done += 1
         
         h_mean = float(np.mean(h_vals))
@@ -222,12 +222,9 @@ def run_r9():
 # R4: CI coverage (well-separated only, 200 MC × 99 bootstrap)
 # ========================================================================== #
 def run_r4():
-    print("\n" + "=" * 60)
-    print("R4: CI coverage (well-separated, 200 MC × 99 bootstrap)")
-    print("=" * 60)
-    
     N_MC = 200
     N_BOOT = 99
+    print(f"\n{'=' * 60}\nR4: CI coverage (well-separated, {N_MC} MC × {N_BOOT} bootstrap)\n{'=' * 60}")
     case = CASES[0]  # well-separated
     ALPHA = 0.05
     
