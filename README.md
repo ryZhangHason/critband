@@ -47,68 +47,6 @@ print(f"Converged: {success}")
 
 The `critical_bandwidth` function uses automatic method selection: **Brent's method** for well-separated data (converges in fewer iterations), **binary search** for weak/small-n cases. All three methods (`auto`, `binary`, `brent`) produce consistent results. Hartigan's dip test is included as a complementary unimodality check, not as a core differentiator of the package.
 
-### Multi-Format Data Loading
-
-Read data from **9 file formats** without learning separate tools:
-
-```python
-from critband.io import read_data
-
-# Auto-detect — just point at any supported file
-x = read_data("measurements.csv")
-x = read_data("survey.xlsx", sheet="Sheet1")
-x = read_data("results.pdf", column="Score")
-y = read_data("report.docx", column=0, return_all=False)
-```
-
-| Format | Extension | Library |
-|--------|-----------|---------|
-| CSV | `.csv` | Built-in `csv` (zero dependencies) |
-| TSV / TXT | `.tsv`, `.txt` | Built-in (zero dependencies) |
-| JSON | `.json` | Built-in `json` (zero dependencies) |
-| Markdown (tables) | `.md` | Built-in parser (zero dependencies) |
-| HTML (tables) | `.html`, `.htm` | Built-in `html.parser` (zero dependencies) |
-| Excel | `.xlsx` | `openpyxl` |
-| Excel (legacy) | `.xls` | `xlrd` |
-| Word (tables) | `.docx` | `python-docx` |
-| PDF (tables) | `.pdf` | `pdfplumber` |
-
-All dependencies are **declared in pyproject.toml** — `pip install critband` installs everything automatically. No system-level tools required.
-
-### Column / Sheet Selection
-
-```python
-from critband.io import read_data, read_buffer
-
-# By sheet name (Excel, PDF, Markdown multi-section)
-x = read_data("data.xlsx", sheet="Measurements")
-
-# By index
-x = read_data("data.xlsx", sheet=0)
-
-# By column name
-x = read_data("data.csv", column="Value")
-
-# By column index
-x = read_data("data.csv", column=1)
-
-# Get all numerical columns as a dict
-cols = read_data("data.csv", return_all=True)
-# cols = {"x": array([...]), "y": array([...])}
-```
-
-### Buffer API
-
-Works with in-memory file buffers for pipeline and service integration:
-
-```python
-from critband.io import read_buffer
-
-# From a BytesIO object
-buf = io.BytesIO(uploaded_file.read())
-x = read_buffer(buf, filename="data.csv")
-```
-
 ## Methodology
 
 ### Critical Bandwidth
@@ -315,6 +253,68 @@ Across these benchmark cases, `critband` achieves **<0.5% mean absolute relative
 | `find_modes` (mode counting) | <0.01 s | 0.03–0.05 s | Comparable |
 
 The runtime difference reflects `critband`'s pure-Python numerical stack (NumPy/SciPy) and adaptive grid sizing, compared to R's compiled package dispatch overhead with bootstrap calibration (`modetest(B = 199)`). These timing numbers were collected on Apple M1-class Apple Silicon hardware.
+
+### Multi-Format Data Loading
+
+Read data from **9 file formats** without learning separate tools:
+
+```python
+from critband.io import read_data
+
+# Auto-detect — just point at any supported file
+x = read_data("measurements.csv")
+x = read_data("survey.xlsx", sheet="Sheet1")
+x = read_data("results.pdf", column="Score")
+y = read_data("report.docx", column=0, return_all=False)
+```
+
+| Format | Extension | Library |
+|--------|-----------|---------|
+| CSV | `.csv` | Built-in `csv` (zero dependencies) |
+| TSV / TXT | `.tsv`, `.txt` | Built-in (zero dependencies) |
+| JSON | `.json` | Built-in `json` (zero dependencies) |
+| Markdown (tables) | `.md` | Built-in parser (zero dependencies) |
+| HTML (tables) | `.html`, `.htm` | Built-in `html.parser` (zero dependencies) |
+| Excel | `.xlsx` | `openpyxl` |
+| Excel (legacy) | `.xls` | `xlrd` |
+| Word (tables) | `.docx` | `python-docx` |
+| PDF (tables) | `.pdf` | `pdfplumber` |
+
+All dependencies are **declared in pyproject.toml** — `pip install critband` installs everything automatically. No system-level tools required.
+
+### Column / Sheet Selection
+
+```python
+from critband.io import read_data, read_buffer
+
+# By sheet name (Excel, PDF, Markdown multi-section)
+x = read_data("data.xlsx", sheet="Measurements")
+
+# By index
+x = read_data("data.xlsx", sheet=0)
+
+# By column name
+x = read_data("data.csv", column="Value")
+
+# By column index
+x = read_data("data.csv", column=1)
+
+# Get all numerical columns as a dict
+cols = read_data("data.csv", return_all=True)
+# cols = {"x": array([...]), "y": array([...])}
+```
+
+### Buffer API
+
+Works with in-memory file buffers for pipeline and service integration:
+
+```python
+from critband.io import read_buffer
+
+# From a BytesIO object
+buf = io.BytesIO(uploaded_file.read())
+x = read_buffer(buf, filename="data.csv")
+```
 
 ## License
 
