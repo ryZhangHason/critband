@@ -1,6 +1,6 @@
-# critband 0.2.1 — Critical Bandwidth Analysis of Multimodal Distributions
+# critband 0.2.2 — Critical Bandwidth Analysis of Multimodal Distributions
 
-`critband` is the release name for `v0.2.1` on GitHub and PyPI.
+`critband` is the release name for `v0.2.2` on GitHub and PyPI.
 
 `critband` is a Python package for analyzing **critical bandwidth** and related multimodality structure in kernel density estimation (KDE).
 
@@ -279,8 +279,8 @@ This section records validation against R's `multimode` package across 12 benchm
 
 | Feature | critband | multimode |
 |---------|:----:|:---------:|
-| Critical bandwidth | ✅ (k >= 2) | ✅ (k = 2 only) |
-| **k-mode detection** | ✅ (any k) | ❌ |
+| Critical bandwidth | ✅ (k >= 2) | ✅ (mod0 >= 1) |
+| **k-mode detection** | ✅ (any k) | ✅ (mod0-based mode test) |
 | **Bimodality strength** | ✅ (interpretable) | ❌ |
 | **Excess mass test** | ✅ | ✅ |
 | **Silverman's bootstrap test** | ✅ | ✅ |
@@ -307,14 +307,14 @@ This section records validation against R's `multimode` package across 12 benchm
 
 Across these benchmark cases, `critband` achieves **<0.5% mean absolute relative error** vs high-precision reference values.
 
-### Performance Comparison (median runtime per case)
+### Performance Comparison (median runtime per case, Apple M1 chip)
 
 | Operation | critband | R (`multimode`) | Comparison |
 |-----------|:----:|:-------------------------:|:-------:|
 | `critical_bandwidth` | 0.04–0.79 s | 0.82–1.58 s | **3–10× difference** |
 | `find_modes` (mode counting) | <0.01 s | 0.03–0.05 s | Comparable |
 
-The runtime difference reflects `critband`'s pure-Python numerical stack (NumPy/SciPy) and adaptive grid sizing, compared to R's compiled package dispatch overhead with bootstrap calibration (`modetest(B = 199)`).
+The runtime difference reflects `critband`'s pure-Python numerical stack (NumPy/SciPy) and adaptive grid sizing, compared to R's compiled package dispatch overhead with bootstrap calibration (`modetest(B = 199)`). These timing numbers were collected on Apple M1-class Apple Silicon hardware.
 
 ## License
 
