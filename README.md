@@ -37,7 +37,7 @@ print(f"Converged: {success}")
 |----------|-------------|
 | `silverman_bandwidth(x)` | Silverman's rule-of-thumb bandwidth: 1.06 · min(σ, IQR/1.34) · n^(-1/5) |
 | `gaussian_kde(x, grid, h, use_fft=None)` | KDE via direct O(n·g) or FFT O(g·log(g)) computation; auto-selects FFT for n > 5000 |
-| `critical_bandwidth(x, k=2, return_ci=False)` | Critical bandwidth for k-mode detection; auto/binary/brent methods; optionally returns bootstrap CI |
+| `critical_bandwidth(x, k=2, return_ci=False)` | Critical bandwidth for mode-count detection; auto/binary/brent methods; optionally returns bootstrap CI |
 | `find_modes(x, h)` | Detect all KDE modes at bandwidth h; returns `ModeResult` with per-mode position, height, width, prominence |
 | `find_trough(x, h)` | Find valley between the two highest KDE peaks; returns x-coordinate or `None` |
 | `detect_components(x)` | Decompose bimodal distribution into two Gaussian components; returns `BimodalDecomposition` |
@@ -118,8 +118,8 @@ WS1 calibration has been run on the fixed design grid and is kept as a validatio
 
 ## Why critband?
 
-- **Critical bandwidth analysis**: One function call computes the critical bandwidth for `k`-mode structure, and you can use `bimodality_strength()` as a descriptive score or `excess_mass()` to estimate how many modes your data has.
-- **k-mode detection**: `critical_bandwidth(x, k=3)` detects the bandwidth where trimodality disappears and generalizes to any `k`.
+- **Critical bandwidth analysis**: One function call computes the critical bandwidth for mode-count structure, and you can use `bimodality_strength()` as a descriptive score or `excess_mass()` to estimate how many modes your data has.
+- **Mode-count detection**: `critical_bandwidth(x, k=3)` detects the bandwidth where trimodality disappears and generalizes the mode-count parameter.
 - **Any-file input**: 9 formats from a single API. CSV, Excel, PDF, Word, JSON, HTML, Markdown — just point `read_data` at the file and go.
 - **One-command install**: `pip install critband` installs everything. No system packages, no manual steps, no Tesseract OCR.
 - **Pure Python dependencies**: All 4 additional libraries (openpyxl, xlrd, python-docx, pdfplumber) are pure Python — no compiled extensions.
@@ -154,7 +154,7 @@ print(f"Strength: {s.strength} (score={s.strength_score:.2f})")
 e = excess_mass(bimodal, n_boot=199)
 print(f"Estimated modes: {e.n_modes_estimated}")
 
-# Trimodal data with k-mode detection
+# Trimodal data with mode-count detection
 trimodal = np.concatenate([
     np.random.normal(-4, 0.3, 150),
     np.random.normal( 0, 0.3, 150),
@@ -217,8 +217,8 @@ This section records validation against R's `multimode` package across 12 benchm
 
 | Feature | critband | multimode |
 |---------|:----:|:---------:|
-| Critical bandwidth | ✅ (k >= 2) | ✅ (mod0 >= 1) |
-| **k-mode detection** | ✅ (any k) | ✅ (mod0-based mode test) |
+| Critical bandwidth | ✅ (mode-count test, k >= 2) | ✅ (mode-count test, mod0 >= 1) |
+| **Mode-count detection** | ✅ (parameterized by k) | ✅ (parameterized by mod0) |
 | **Bimodality strength** | ✅ (interpretable) | ❌ |
 | **Excess mass test** | ✅ | ✅ |
 | **Silverman's bootstrap test** | ✅ | ✅ |
@@ -236,7 +236,7 @@ This section records validation against R's `multimode` package across 12 benchm
 | Unequal variance | 400 | 1.7849 | 0.000 | ✅ Both detect bimodality |
 | Unequal weights | 500 | 1.2591 | 0.000 | ✅ critband correct; R yields spurious 772 modes |
 | Extreme separation | 400 | 4.6987 | 0.000 | ✅ Both detect bimodality |
-| Trimodal | 450 | 1.3824 | 0.000 | ✅ critband finds k=3; R detects multimodality |
+| Trimodal | 450 | 1.3824 | 0.000 | ✅ critband finds 3 modes; R detects multimodality |
 | Skewed bimodal | 500 | 1.1417 | 0.000 | ✅ Both detect bimodality |
 | Heavy-tailed bimodal | 400 | 2.7109 | 0.000 | ✅ Both detect bimodality |
 | Near unimodal | 600 | 0.4186 | 0.055 | ✅ critband flags weak; R agrees (n.s.) |
