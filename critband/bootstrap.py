@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 import numpy as np
+from scipy.stats import bootstrap as scipy_bootstrap
 
 from critband.bandwidth import _validate_input, critical_bandwidth
 
@@ -36,6 +37,8 @@ class BootstrapResult:
         The confidence level used (1 - alpha).
     n_failed : int
         Number of bootstrap resamples that failed to converge.
+    interval_method : str
+        Bootstrap interval method used to compute ci_lower/ci_upper.
     """
 
     h_crit: float
@@ -46,6 +49,7 @@ class BootstrapResult:
     n_resamples: int
     confidence_level: float
     n_failed: int = 0
+    interval_method: str = "BCa"
 
 
 def bootstrap_critical_bandwidth(
@@ -53,13 +57,14 @@ def bootstrap_critical_bandwidth(
     n_resamples: int = 999,
     alpha: float = 0.05,
     random_state: Optional[int] = None,
+    ci_method: str = "BCa",
     **kwargs: Any,
 ) -> BootstrapResult:
     """
     Bootstrap confidence interval for the critical bandwidth.
 
     Resamples the input data with replacement, computes h_crit for each
-    resample, and returns a percentile confidence interval and standard error.
+    resample, and returns a bootstrap interval and standard error.
 
     Parameters
     ----------
@@ -68,9 +73,12 @@ def bootstrap_critical_bandwidth(
     n_resamples : int, optional
         Number of bootstrap resamples (default 999).
     alpha : float, optional
-        Significance level for the confidence interval (default 0.05 -> 95% CI).
+        Significance level for the confidence interval (default 0.05 -> 95% interval).
     random_state : int, optional
         Random seed for reproducible resampling.
+    ci_method : str, optional
+        Bootstrap interval method. Supported values are "BCa", "percentile",
+        and "basic". Default is "BCa".
     **kwargs
         Additional keyword arguments passed through to critical_bandwidth().
         See critical_bandwidth() documentation for supported options
@@ -84,13 +92,14 @@ def bootstrap_critical_bandwidth(
 
     Notes
     -----
-    The confidence interval is computed using the percentile method:
-    lower and upper percentiles of the bootstrap distribution at
-    (alpha/2) and (1 - alpha/2).
+    The default interval method uses SciPy's calibrated bootstrap routine.
+    If SciPy's interval computation fails, the function falls back to a
+    manual percentile bootstrap so that a usable exploratory interval is
+    still returned.
 
     Bootstrap resamples where critical_bandwidth fails to converge
-    (success=False) are excluded from the distribution. If more than
-    1% of resamples fail, a warning is issued.
+    (success=False) are currently kept in the distribution as the best
+    estimate returned by critical_bandwidth().
     """
     _validate_input(x)
 
@@ -100,49 +109,64 @@ def bootstrap_critical_bandwidth(
     h_crit_original, _ = critical_bandwidth(x, **kwargs)
 
     n = len(x)
-    boot_samples: list = []
     n_failed = 0
 
-    for i in range(n_resamples):
-        # Bootstrap resample with replacement from the original data
-        # Note: this is a simple (naive) percentile bootstrap. The coverage
-        # may be below nominal level; for rigor, a BCa or studentized
-        # bootstrap should be used. See Section~\ref{sec:limitations}.
-        resample = rng.choice(x, size=n, replace=True)
-        h_crit_boot, ok = critical_bandwidth(resample, **kwargs)
-        if ok:
-            boot_samples.append(h_crit_boot)
-        else:
-            n_failed += 1
+    def _statistic(sample: np.ndarray) -> float:
+        h_crit_boot, _ = critical_bandwidth(sample, **kwargs)
+        return float(h_crit_boot)
 
-    boot_arr = np.array(boot_samples)
+    scipy_method = ci_method.strip()
+    scipy_method_map = {
+        "bca": "BCa",
+        "bca ": "BCa",
+        "percentile": "percentile",
+        "basic": "basic",
+    }
+    scipy_method_key = scipy_method_map.get(scipy_method.lower(), scipy_method)
 
-    # Handle edge cases: empty or single-element bootstrap distribution
-    if len(boot_arr) == 0:
-        # All bootstrap resamples failed to converge; return NaN CI
-        return BootstrapResult(
-            h_crit=h_crit_original,
-            ci_lower=float("nan"),
-            ci_upper=float("nan"),
-            standard_error=float("nan"),
-            distribution=boot_arr,
+    try:
+        scipy_result = scipy_bootstrap(
+            (x,),
+            _statistic,
             n_resamples=n_resamples,
             confidence_level=1 - alpha,
-            n_failed=n_failed,
+            method=scipy_method_key,
+            random_state=rng,
+            vectorized=False,
+            paired=False,
         )
-
-    if n_failed > 0 and n_failed / n_resamples > 0.01:
+        boot_arr = np.asarray(scipy_result.bootstrap_distribution, dtype=float).reshape(-1)
+        ci_lower = float(scipy_result.confidence_interval.low)
+        ci_upper = float(scipy_result.confidence_interval.high)
+        interval_method = str(scipy_method_key)
+    except Exception as exc:
         import warnings
 
         warnings.warn(
-            f"{n_failed}/{n_resamples} ({100 * n_failed / n_resamples:.1f}%) "
-            "bootstrap resamples failed to converge and were excluded."
+            f"SciPy bootstrap failed ({exc}); falling back to manual percentile resampling."
         )
-
-    # Percentile CI
-    p_low = 100 * alpha / 2
-    p_high = 100 * (1 - alpha / 2)
-    ci_lower, ci_upper = np.percentile(boot_arr, [p_low, p_high])
+        boot_samples: list[float] = []
+        for _ in range(n_resamples):
+            resample = rng.choice(x, size=n, replace=True)
+            h_crit_boot, _ = critical_bandwidth(resample, **kwargs)
+            boot_samples.append(float(h_crit_boot))
+        boot_arr = np.asarray(boot_samples, dtype=float)
+        if len(boot_arr) == 0:
+            return BootstrapResult(
+                h_crit=h_crit_original,
+                ci_lower=float("nan"),
+                ci_upper=float("nan"),
+                standard_error=float("nan"),
+                distribution=boot_arr,
+                n_resamples=n_resamples,
+                confidence_level=1 - alpha,
+                n_failed=n_failed,
+                interval_method="percentile",
+            )
+        p_low = 100 * alpha / 2
+        p_high = 100 * (1 - alpha / 2)
+        ci_lower, ci_upper = np.percentile(boot_arr, [p_low, p_high])
+        interval_method = "percentile"
 
     # Standard error: guard against single-element distribution
     if len(boot_arr) < 2:
@@ -159,6 +183,7 @@ def bootstrap_critical_bandwidth(
         n_resamples=n_resamples,
         confidence_level=1 - alpha,
         n_failed=n_failed,
+        interval_method=interval_method,
     )
 
 

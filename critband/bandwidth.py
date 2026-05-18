@@ -4,6 +4,7 @@ Includes Silverman's rule of thumb and critical bandwidth detection for bimodal 
 """
 
 from dataclasses import dataclass, field
+import warnings
 from typing import Callable, Dict, Optional, Tuple, Union
 
 import numpy as np
@@ -889,6 +890,8 @@ class BimodalDecomposition:
     component2: Component
     separation_point: float
     dip_ratio: float
+    is_exploratory: bool = True
+    note: str = ""
 
 
 def detect_components(
@@ -918,7 +921,7 @@ def detect_components(
     Returns
     -------
     BimodalDecomposition
-        Structured decomposition with component parameters.
+        Structured exploratory decomposition with component parameters.
 
     Raises
     ------
@@ -929,8 +932,6 @@ def detect_components(
 
     h_crit, ok = critical_bandwidth(x, kernel=kernel)
     if not ok:
-        import warnings
-
         warnings.warn(
             "Critical bandwidth search did not fully converge; proceeding with best estimate."
         )
@@ -975,6 +976,11 @@ def detect_components(
             "The data may be unimodal or the trough is at the data boundary."
         )
 
+    note = ""
+    if dip_ratio > 0.70:
+        note = "Overlapping or weakly separated mixture; trough split should be treated as exploratory."
+        warnings.warn(note)
+
     n_total = len(x)
     comp1 = Component(
         mean=float(np.mean(x_left)),
@@ -997,6 +1003,8 @@ def detect_components(
         component2=comp2,
         separation_point=trough_x,
         dip_ratio=dip_ratio,
+        is_exploratory=True,
+        note=note,
     )
 
 
@@ -1202,6 +1210,12 @@ def dip_test(x, n_boot=999, random_state=None):
     on [0, 1], which is the least favorable unimodal distribution under
     the null. This is the standard approach used by the R 'diptest' package.
     """
+    if len(x) > 5000 and n_boot >= 999:
+        warnings.warn(
+            "dip_test() is expensive for large samples at the default bootstrap count; "
+            "consider a smaller n_boot or a complementary multimodality check."
+        )
+
     # Compute observed dip
     dip_obs = _compute_dip_statistic(x)
 
@@ -1251,6 +1265,10 @@ class BimodalityStrength:
         Interpretive label: "strong", "moderate", "weak", or "unimodal".
     strength_score : float
         Scalar strength from 0.0 (unimodal) to 1.0 (strongly bimodal).
+    is_heuristic : bool
+        Always True for the current implementation.
+    calibration_status : str
+        Text tag describing the current calibration state.
     """
 
     dip_ratio: float
@@ -1258,6 +1276,8 @@ class BimodalityStrength:
     n_modes: int
     strength: str
     strength_score: float
+    is_heuristic: bool = True
+    calibration_status: str = "heuristic"
 
 
 def bimodality_strength(
@@ -1286,7 +1306,8 @@ def bimodality_strength(
     -------
     BimodalityStrength
         Structured assessment with dip_ratio, h_crit_ratio, n_modes,
-        and an interpretable strength label + score.
+        and an interpretable strength label + score. The label is heuristic
+        rather than a validated decision rule.
 
     Notes
     -----
@@ -1351,6 +1372,8 @@ def bimodality_strength(
         n_modes=n_modes,
         strength=strength,
         strength_score=strength_score,
+        is_heuristic=True,
+        calibration_status="heuristic",
     )
 
 
