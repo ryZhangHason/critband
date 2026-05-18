@@ -279,8 +279,8 @@ This section records validation against R's `multimode` package across 12 benchm
 
 | Feature | critband | multimode |
 |---------|:----:|:---------:|
-| Critical bandwidth | ✅ ($k \ge 2$) | ✅ ($k = 2$ only) |
-| **k-mode detection** | ✅ (any $k$) | ❌ |
+| Critical bandwidth | ✅ (k >= 2) | ✅ (k = 2 only) |
+| **k-mode detection** | ✅ (any k) | ❌ |
 | **Bimodality strength** | ✅ (interpretable) | ❌ |
 | **Excess mass test** | ✅ | ✅ |
 | **Silverman's bootstrap test** | ✅ | ✅ |
@@ -290,7 +290,7 @@ This section records validation against R's `multimode` package across 12 benchm
 
 ### Quantitative Results ($h_{\text{crit}}$ Accuracy)
 
-| Case | $n$ | critband $h_{\text{crit}}$ | R `modetest` $p$ | Agreement |
+| Case | n | critband h_crit | R `modetest` p | Agreement |
 |------|:---:|:---------------------:|:----------------:|:---------:|
 | Well-separated | 400 | 1.8650 | 0.000 | ✅ Both detect bimodality |
 | Moderate separation | 500 | 1.0964 | 0.000 | ✅ Both detect bimodality |
@@ -298,11 +298,11 @@ This section records validation against R's `multimode` package across 12 benchm
 | Unequal variance | 400 | 1.7849 | 0.000 | ✅ Both detect bimodality |
 | Unequal weights | 500 | 1.2591 | 0.000 | ✅ critband correct; R yields spurious 772 modes |
 | Extreme separation | 400 | 4.6987 | 0.000 | ✅ Both detect bimodality |
-| Trimodal | 450 | 1.3824 | 0.000 | ✅ critband finds $k=3$; R detects multimodality |
+| Trimodal | 450 | 1.3824 | 0.000 | ✅ critband finds k=3; R detects multimodality |
 | Skewed bimodal | 500 | 1.1417 | 0.000 | ✅ Both detect bimodality |
 | Heavy-tailed bimodal | 400 | 2.7109 | 0.000 | ✅ Both detect bimodality |
 | Near unimodal | 600 | 0.4186 | 0.055 | ✅ critband flags weak; R agrees (n.s.) |
-| Small sample bimodal | 60 | 1.8608 | 0.000 | ✅ Both detect bimodality (small $n$) |
+| Small sample bimodal | 60 | 1.8608 | 0.000 | ✅ Both detect bimodality (small n) |
 | Overlapping variances | 500 | 0.4598 | 0.045 | ✅ critband flags weak; R agrees (n.s.) |
 
 Across these benchmark cases, `critband` achieves **<0.5% mean absolute relative error** vs high-precision reference values.
