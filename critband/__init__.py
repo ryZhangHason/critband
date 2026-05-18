@@ -26,8 +26,10 @@ from .bandwidth import (
 )
 from .bootstrap import (
     BootstrapResult,
+    ModeTestResult,
     SilvermanTestResult,
     bootstrap_critical_bandwidth,
+    modetest,
     silverman_test,
 )
 
@@ -52,6 +54,8 @@ __all__ = [
     "ExcessMassResult",
     "bootstrap_critical_bandwidth",
     "BootstrapResult",
+    "ModeTestResult",
     "SilvermanTestResult",
+    "modetest",
     "silverman_test",
 ]

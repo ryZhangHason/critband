@@ -5,7 +5,7 @@ Tests for bootstrap confidence interval estimation.
 import numpy as np
 import pytest
 
-from pola import BootstrapResult, bootstrap_critical_bandwidth, silverman_test
+from pola import BootstrapResult, ModeTestResult, bootstrap_critical_bandwidth, modetest, silverman_test
 from pola.benchmark import BENCHMARK_CASES
 
 
@@ -142,6 +142,12 @@ class TestBootstrapCriticalBandwidth:
 class TestSilvermanTest:
     """Test Silverman's test for bimodality."""
 
+    @staticmethod
+    def _hall_york_lambda(alpha: float) -> float:
+        numerator = 0.94029 * alpha**3 - 1.59914 * alpha**2 + 0.17695 * alpha + 0.48971
+        denominator = alpha**3 - 1.77793 * alpha**2 + 0.36162 * alpha + 0.42423
+        return numerator / denominator
+
     def test_silverman_test_bimodal_data(self):
         """Well-separated bimodal data should give small p-value."""
         x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
@@ -150,6 +156,8 @@ class TestSilvermanTest:
         assert result.h_crit > 0
         assert len(result.null_distribution) == 99
         assert 0 <= result.n_failed <= result.n_resamples
+        assert result.calibration_method == "silverman"
+        assert result.calibration_factor == 1.0
 
     def test_silverman_test_unimodal_data(self):
         """Unimodal data should give large p-value."""
@@ -158,11 +166,83 @@ class TestSilvermanTest:
         result = silverman_test(x, n_resamples=99)
         assert result.p_value > 0.05
 
+    def test_silverman_test_hall_york_calibration(self):
+        """Hall-York calibration should expose its factor and stay monotone."""
+        x = BENCHMARK_CASES["near_unimodal"].generator(42)
+        si = silverman_test(x, n_resamples=99, random_state=42)
+        hy = silverman_test(
+            x,
+            n_resamples=99,
+            random_state=42,
+            calibration="hall_york",
+            alpha=0.05,
+        )
+        expected_lambda = self._hall_york_lambda(0.05)
+        assert hy.calibration_method == "hall_york"
+        assert hy.calibration_alpha == 0.05
+        assert hy.calibration_factor == pytest.approx(expected_lambda)
+        assert hy.calibration_factor > 1.0
+        assert hy.p_value <= si.p_value
+        assert len(hy.null_distribution) == 99
+
     def test_silverman_test_constant_data(self):
         """Constant data should not crash."""
         x = np.ones(50) * 5.0
         result = silverman_test(x, n_resamples=99)
         assert result.p_value >= 0  # Should return valid p-value
+
+
+class TestModeTestDispatcher:
+    """Test the R-style modetest compatibility wrapper."""
+
+    def test_modetest_si_returns_htest_like_result(self):
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        result = modetest(x, method="SI", B=50, random_state=42)
+        assert isinstance(result, ModeTestResult)
+        assert result.method.startswith("Silverman")
+        assert result.statistic_name == "Critical bandwidth"
+        assert result.null_value == 1
+        assert result.alternative == "greater"
+        assert result.sample_size == len(x)
+        assert result.bad_obs == 0
+
+    def test_modetest_hh_uses_dip_statistic(self):
+        x = BENCHMARK_CASES["near_unimodal"].generator(42)
+        result = modetest(x, method="HH", B=50, random_state=42)
+        assert result.statistic_name == "Dip"
+        assert result.p_value >= 0
+
+    def test_modetest_hy_support_bounds(self):
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        result = modetest(
+            x,
+            method="HY",
+            B=20,
+            random_state=42,
+            lowsup=-5.0,
+            uppsup=5.0,
+        )
+        assert result.method.startswith("Hall and York")
+        assert result.statistic_name == "Critical bandwidth"
+        assert result.p_value >= 0.0
+
+    def test_modetest_removes_nonfinite(self):
+        x = np.array([0.0, 1.0, np.nan, 2.0])
+        result = modetest(x, method="SI", B=20, random_state=42)
+        assert result.bad_obs == 1
+        assert result.sample_size == 3
+
+    def test_modetest_unknown_method_raises(self):
+        x = np.array([0.0, 1.0, 2.0])
+        with pytest.raises(ValueError, match="Unknown method"):
+            modetest(x, method="XYZ")
+
+    def test_modetest_fm_not_implemented(self):
+        x = BENCHMARK_CASES["moderate_separation"].generator(42)
+        result = modetest(x, method="FM", B=20, random_state=42)
+        assert result.statistic_name == "Cramer-von Mises"
+        assert result.method.startswith("Fisher and Marron")
+        assert result.p_value >= 0.0
 
     def test_silverman_test_reproducible(self):
         """Same random_state gives same result."""

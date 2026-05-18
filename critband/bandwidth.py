@@ -190,6 +190,8 @@ def find_modes(
     grid_points: Optional[int] = None,
     prominence: float = 0.01,
     kernel: Union[str, Callable] = "gaussian",
+    lowsup: Optional[float] = None,
+    uppsup: Optional[float] = None,
 ) -> ModeResult:
     """Find all modes (peaks) in KDE at bandwidth h with detailed metadata.
 
@@ -224,7 +226,9 @@ def find_modes(
     if grid_points is None:
         data_range = x.max() - x.min() if len(x) > 1 else 1.0
         grid_points = _kde_grid_points(len(x), h=h, data_range=data_range)
-    grid = np.linspace(x.min() - 3 * h, x.max() + 3 * h, grid_points)
+    grid_min = x.min() - 3 * h if lowsup is None or not np.isfinite(lowsup) else lowsup
+    grid_max = x.max() + 3 * h if uppsup is None or not np.isfinite(uppsup) else uppsup
+    grid = np.linspace(grid_min, grid_max, grid_points)
     kde_vals = gaussian_kde(x, grid, h, kernel=kernel)
 
     peaks, properties = signal.find_peaks(kde_vals, prominence=prominence * np.max(kde_vals))
@@ -279,6 +283,8 @@ def count_modes(
     grid_points: Optional[int] = None,
     prominence: float = 0.01,
     kernel: Union[str, Callable] = "gaussian",
+    lowsup: Optional[float] = None,
+    uppsup: Optional[float] = None,
 ) -> int:
     """
     Count number of modes in kernel density estimate for given bandwidth.
@@ -303,7 +309,15 @@ def count_modes(
     int
         Number of detected modes
     """
-    result = find_modes(x, h, grid_points=grid_points, prominence=prominence, kernel=kernel)
+    result = find_modes(
+        x,
+        h,
+        grid_points=grid_points,
+        prominence=prominence,
+        kernel=kernel,
+        lowsup=lowsup,
+        uppsup=uppsup,
+    )
     return result.n_modes
 
 
@@ -313,6 +327,8 @@ def _trough_ratio(
     grid_points: Optional[int] = None,
     prominence: float = 0.01,
     kernel: Union[str, Callable] = "gaussian",
+    lowsup: Optional[float] = None,
+    uppsup: Optional[float] = None,
 ) -> float:
     """
     Continuous measure of bimodality strength at bandwidth h.
@@ -336,7 +352,9 @@ def _trough_ratio(
         data_range = x.max() - x.min() if len(x) > 1 else 1.0
         grid_points = _kde_grid_points(len(x), h=h, data_range=data_range)
 
-    grid = np.linspace(x.min() - 3 * h, x.max() + 3 * h, grid_points)
+    grid_min = x.min() - 3 * h if lowsup is None or not np.isfinite(lowsup) else lowsup
+    grid_max = x.max() + 3 * h if uppsup is None or not np.isfinite(uppsup) else uppsup
+    grid = np.linspace(grid_min, grid_max, grid_points)
     kde_vals = gaussian_kde(x, grid, h, kernel=kernel)
 
     peaks = signal.find_peaks(kde_vals, prominence=prominence * np.max(kde_vals))[0]
@@ -484,6 +502,8 @@ def _bracket_critical(
     max_iter: int = 10,
     kernel: Union[str, Callable] = "gaussian",
     k: int = 2,
+    lowsup: Optional[float] = None,
+    uppsup: Optional[float] = None,
 ) -> Tuple[float, float]:
     """
     Narrow bracket around critical bandwidth using binary search on count_modes.
@@ -511,7 +531,7 @@ def _bracket_critical(
     low, high = h_min, h_max
     for _ in range(max_iter):
         mid = (low + high) / 2
-        if count_modes(x, mid, kernel=kernel) >= k:
+        if count_modes(x, mid, kernel=kernel, lowsup=lowsup, uppsup=uppsup) >= k:
             low = mid
         else:
             high = mid
@@ -523,6 +543,8 @@ def _brent_objective(
     x: np.ndarray,
     kernel: Union[str, Callable] = "gaussian",
     k: int = 2,
+    lowsup: Optional[float] = None,
+    uppsup: Optional[float] = None,
 ) -> float:
     """Continuous objective function for Brent's method.
 
@@ -546,9 +568,9 @@ def _brent_objective(
     """
     if h <= 0:
         return 1.0
-    n_modes = count_modes(x, h, kernel=kernel)
+    n_modes = count_modes(x, h, kernel=kernel, lowsup=lowsup, uppsup=uppsup)
     if n_modes >= k:
-        tr = _trough_ratio(x, h, kernel=kernel)
+        tr = _trough_ratio(x, h, kernel=kernel, lowsup=lowsup, uppsup=uppsup)
         # Positive, approaches 0+ as trough fills near h_crit
         return max(1.0 - tr, 1e-10)
     else:
@@ -566,6 +588,8 @@ def critical_bandwidth(
     method: str = "auto",
     k: int = 2,
     kernel: Union[str, Callable] = "gaussian",
+    lowsup: Optional[float] = None,
+    uppsup: Optional[float] = None,
     return_ci: bool = False,
     return_ci_result: bool = False,
     return_ci_metadata: bool = False,
@@ -609,6 +633,10 @@ def critical_bandwidth(
     kernel : str or callable, optional
         Kernel function. Built-in: "gaussian" (default), "epanechnikov",
         "uniform", "triangular". Also accepts callables.
+    lowsup : float, optional
+        Lower support bound for bounded-support mode counting.
+    uppsup : float, optional
+        Upper support bound for bounded-support mode counting.
     return_ci : bool, optional
         If True, also return a bootstrap confidence interval (default False).
     return_ci_result : bool, optional
@@ -666,8 +694,8 @@ def critical_bandwidth(
         h_min = 1e-8
 
     # Check boundary conditions
-    modes_min = count_modes(x, h_min, kernel=kernel)
-    modes_max = count_modes(x, h_max, kernel=kernel)
+    modes_min = count_modes(x, h_min, kernel=kernel, lowsup=lowsup, uppsup=uppsup)
+    modes_max = count_modes(x, h_max, kernel=kernel, lowsup=lowsup, uppsup=uppsup)
 
     if modes_max >= k:
         h_crit, ok = h_max, False
@@ -681,7 +709,7 @@ def critical_bandwidth(
                 _brent_objective,
                 h_min,
                 h_max,
-                args=(x, kernel, k),
+                args=(x, kernel, k, lowsup, uppsup),
                 xtol=tol,
                 maxiter=max_iter,
             )
@@ -690,24 +718,24 @@ def critical_bandwidth(
             # in small increments until <k modes, then accept the result.
             h_test = h_crit
             for _ in range(20):
-                if count_modes(x, h_test, kernel=kernel) < k:
+                if count_modes(x, h_test, kernel=kernel, lowsup=lowsup, uppsup=uppsup) < k:
                     h_crit, ok = h_test, True
                     break
                 h_test *= 1.001  # nudge upward toward <k side
             else:
                 # Verification failed after nudging, fallback
-                h_crit, ok = _binary_search_critical(x, h_min, h_max, tol, max_iter, kernel, k)
+                h_crit, ok = _binary_search_critical(x, h_min, h_max, tol, max_iter, kernel, k, lowsup=lowsup, uppsup=uppsup)
         except (ValueError, RuntimeError):
-            h_crit, ok = _binary_search_critical(x, h_min, h_max, tol, max_iter, kernel, k)
+            h_crit, ok = _binary_search_critical(x, h_min, h_max, tol, max_iter, kernel, k, lowsup=lowsup, uppsup=uppsup)
     elif method == "auto":
         low, high = _bracket_critical(
-            x, h_min, h_max, min(10, max_iter // 3), kernel=kernel, k=k
+            x, h_min, h_max, min(10, max_iter // 3), kernel=kernel, k=k, lowsup=lowsup, uppsup=uppsup
         )
-        h_crit, ok = _binary_search_critical(x, low, high, tol, max_iter, kernel, k)
+        h_crit, ok = _binary_search_critical(x, low, high, tol, max_iter, kernel, k, lowsup=lowsup, uppsup=uppsup)
     else:
         # Binary search (method="binary")
         low, high = h_min, h_max
-        h_crit, ok = _binary_search_critical(x, low, high, tol, max_iter, kernel, k)
+        h_crit, ok = _binary_search_critical(x, low, high, tol, max_iter, kernel, k, lowsup=lowsup, uppsup=uppsup)
 
     if return_ci:
         from critband.bootstrap import bootstrap_critical_bandwidth
@@ -723,6 +751,10 @@ def critical_bandwidth(
         boot_kwargs["k"] = k
         if kernel != "gaussian":
             boot_kwargs["kernel"] = kernel
+        if lowsup is not None:
+            boot_kwargs["lowsup"] = lowsup
+        if uppsup is not None:
+            boot_kwargs["uppsup"] = uppsup
 
         boot = bootstrap_critical_bandwidth(
             x,
@@ -756,6 +788,8 @@ def _binary_search_critical(
     max_iter: int = 100,
     kernel: Union[str, Callable] = "gaussian",
     k: int = 2,
+    lowsup: Optional[float] = None,
+    uppsup: Optional[float] = None,
 ) -> Tuple[float, bool]:
     """Binary search for critical bandwidth.
 
@@ -782,7 +816,7 @@ def _binary_search_critical(
     """
     for _ in range(max_iter):
         mid = (low + high) / 2
-        if count_modes(x, mid, kernel=kernel) >= k:
+        if count_modes(x, mid, kernel=kernel, lowsup=lowsup, uppsup=uppsup) >= k:
             low = mid
         else:
             high = mid
@@ -798,6 +832,8 @@ def find_trough(
     prominence: float = 0.01,
     refine: bool = True,
     kernel: Union[str, Callable] = "gaussian",
+    lowsup: Optional[float] = None,
+    uppsup: Optional[float] = None,
 ) -> Optional[float]:
     """
     Find the trough (lowest point) between the two most prominent KDE modes.
@@ -830,7 +866,9 @@ def find_trough(
     if grid_points is None:
         data_range = x.max() - x.min() if len(x) > 1 else 1.0
         grid_points = _kde_grid_points(len(x), h=h, data_range=data_range)
-    grid = np.linspace(x.min() - 3 * h, x.max() + 3 * h, grid_points)
+    grid_min = x.min() - 3 * h if lowsup is None or not np.isfinite(lowsup) else lowsup
+    grid_max = x.max() + 3 * h if uppsup is None or not np.isfinite(uppsup) else uppsup
+    grid = np.linspace(grid_min, grid_max, grid_points)
     kde_vals = gaussian_kde(x, grid, h, kernel=kernel)
 
     peaks = signal.find_peaks(kde_vals, prominence=prominence * np.max(kde_vals))[0]
@@ -1179,6 +1217,36 @@ def _compute_dip_statistic(x):
     return best_dip
 
 
+def _sample_kde_bootstrap_support(
+    x: np.ndarray,
+    bandwidth: float,
+    rng: np.random.Generator,
+    lowsup: Optional[float],
+    uppsup: Optional[float],
+) -> np.ndarray:
+    """Sample a KDE bootstrap replicate with optional support rejection."""
+    n = len(x)
+    sample = x[rng.integers(0, n, size=n)].astype(float)
+    sample += bandwidth * rng.normal(0.0, 1.0, n)
+    has_bounds = (
+        (lowsup is not None and np.isfinite(lowsup))
+        or (uppsup is not None and np.isfinite(uppsup))
+    )
+    if has_bounds:
+        low = -np.inf if lowsup is None else lowsup
+        high = np.inf if uppsup is None else uppsup
+        for idx in range(n):
+            tries = 0
+            while (sample[idx] < low or sample[idx] > high) and tries < 100:
+                sample[idx] = x[rng.integers(0, n)] + bandwidth * rng.normal()
+                tries += 1
+            if sample[idx] < low:
+                sample[idx] = low
+            elif sample[idx] > high:
+                sample[idx] = high
+    return sample
+
+
 def dip_test(x, n_boot=999, random_state=None):
     """Hartigan's dip test for unimodality.
 
@@ -1457,6 +1525,8 @@ def excess_mass(
     n_modes_max: int = 5,
     n_boot: int = 199,
     random_state: Optional[int] = None,
+    lowsup: Optional[float] = None,
+    uppsup: Optional[float] = None,
 ) -> ExcessMassResult:
     """Excess mass test for multimodality.
 
@@ -1483,6 +1553,10 @@ def excess_mass(
         Number of bootstrap resamples (default 199).
     random_state : int or None, optional
         Random seed for reproducible bootstrap.
+    lowsup : float, optional
+        Lower support bound for bounded-support resampling.
+    uppsup : float, optional
+        Upper support bound for bounded-support resampling.
 
     Returns
     -------
@@ -1518,7 +1592,9 @@ def excess_mass(
     data_range = x.max() - x.min() if len(x) > 1 else 1.0
     gp = _kde_grid_points(len(x), h=h, data_range=data_range)
     gp = max(gp, grid_points)
-    grid = np.linspace(x.min() - 3 * h, x.max() + 3 * h, gp)
+    grid_min = x.min() - 3 * h if lowsup is None or not np.isfinite(lowsup) else lowsup
+    grid_max = x.max() + 3 * h if uppsup is None or not np.isfinite(uppsup) else uppsup
+    grid = np.linspace(grid_min, grid_max, gp)
     kde_vals = gaussian_kde(x, grid, h, kernel=kernel)
     dx = grid[1] - grid[0]
 
@@ -1553,10 +1629,23 @@ def excess_mass(
     extreme_counts = np.zeros(n_deltas)
 
     for _ in range(n_boot):
-        x_boot = rng.uniform(0, 1, n)
+        has_bounds = (
+            (lowsup is not None and np.isfinite(lowsup))
+            or (uppsup is not None and np.isfinite(uppsup))
+        )
+        if has_bounds:
+            x_boot = _sample_kde_bootstrap_support(x, h, rng, lowsup, uppsup)
+        else:
+            x_boot = rng.uniform(0, 1, n)
 
         # KDE for bootstrap sample
-        grid_boot = np.linspace(x_boot.min() - 3 * h, x_boot.max() + 3 * h, gp)
+        grid_boot_min = (
+            x_boot.min() - 3 * h if lowsup is None or not np.isfinite(lowsup) else lowsup
+        )
+        grid_boot_max = (
+            x_boot.max() + 3 * h if uppsup is None or not np.isfinite(uppsup) else uppsup
+        )
+        grid_boot = np.linspace(grid_boot_min, grid_boot_max, gp)
         kde_boot = gaussian_kde(x_boot, grid_boot, h, kernel=kernel)
         dx_boot = grid_boot[1] - grid_boot[0]
 
