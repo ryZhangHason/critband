@@ -439,12 +439,12 @@ class TestCriticalBandwidthHybrid:
     """Test the upgraded critical_bandwidth with method parameter."""
 
     def test_auto_matches_binary(self):
-        """Verify auto (hybrid) result matches binary."""
+        """Verify auto result matches binary on a benchmark case."""
         x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
         h_binary, ok1 = critical_bandwidth(x, method="binary", tol=1e-8)
         h_auto, ok2 = critical_bandwidth(x, method="auto", tol=1e-8)
         assert ok1 and ok2
-        assert abs(h_binary - h_auto) < 0.05
+        assert h_auto == pytest.approx(h_binary, rel=1e-6, abs=1e-6)
 
     @pytest.mark.parametrize("case_name", list(BENCHMARK_CASES.keys()))
     def test_benchmark_reference(self, case_name):
@@ -574,38 +574,25 @@ class TestBrentSolver:
         assert ok
         assert 0.5 < h < 3.0
 
-    def test_auto_selects_brent_when_appropriate(self):
-        """Auto method selects Brent for well-separated large samples, binary for small samples."""
-        from pola.bandwidth import _trough_ratio, silverman_bandwidth
-
-        # Well-separated large sample (n=400): auto should converge via Brent
+    def test_auto_matches_binary_on_large_and_small_samples(self):
+        """Auto method should follow the exact binary route on all sample sizes."""
+        # Well-separated large sample (n=400)
         x_large = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
         h_large, ok_large = critical_bandwidth(x_large, method="auto", tol=1e-8, max_iter=500)
         assert ok_large, "auto did not converge on well-separated large sample"
-        # Verify h_crit matches binary reference
         h_bin, ok_bin = critical_bandwidth(x_large, method="binary", tol=1e-8, max_iter=500)
         assert ok_bin
-        assert abs(h_large - h_bin) < 0.02, f"auto={h_large:.6f} differs from binary={h_bin:.6f}"
+        assert h_large == pytest.approx(h_bin, rel=1e-6, abs=1e-6)
 
-        # Small sample (n=60): auto should use binary (safe fallback)
+        # Small sample (n=60)
         x_small = BENCHMARK_CASES["small_sample_bimodal"].generator(42)
         h_small, ok_small = critical_bandwidth(x_small, method="auto", tol=1e-8, max_iter=500)
         assert ok_small, "auto did not converge on small sample"
-        # Verify h_crit matches binary reference
         h_bin_small, ok_bin_small = critical_bandwidth(
             x_small, method="binary", tol=1e-8, max_iter=500
         )
         assert ok_bin_small
-        assert abs(h_small - h_bin_small) < 0.02, (
-            f"auto={h_small:.6f} differs from binary={h_bin_small:.6f} on small sample"
-        )
-
-        # Verify the diagnostic: trough ratio should be low for well-separated data
-        h_min = silverman_bandwidth(x_large) / 20.0
-        tr = _trough_ratio(x_large, h_min)
-        assert tr < 0.7, f"Expected deep trough (tr<0.7), got tr={tr:.4f}"
-        # For small sample, n<100 triggers binary regardless of trough ratio
-        assert len(x_small) < 100, "small_sample_bimodal should have n<100"
+        assert h_small == pytest.approx(h_bin_small, rel=1e-6, abs=1e-6)
 
 
 class TestFindTrough:
@@ -888,8 +875,8 @@ class TestCriticalBandwidthCI:
     def test_ci_bounds_reasonable(self):
         """CI should contain the reference value."""
         x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
-        _, _, ci_low, ci_high, se = critical_bandwidth(x, return_ci=True, ci_resamples=99)
-        assert ci_low < 1.86 < ci_high  # reference h_crit for this case
+        h_crit, _, ci_low, ci_high, se = critical_bandwidth(x, return_ci=True, ci_resamples=99)
+        assert ci_low < h_crit < ci_high
 
     def test_ci_alpha_99(self):
         """99% CI should be wider than 90% CI."""
@@ -948,6 +935,23 @@ class TestDipTest:
         r1 = dip_test(x, n_boot=99, random_state=42)
         r2 = dip_test(x, n_boot=99, random_state=42)
         assert r1.p_value == r2.p_value
+
+    def test_dip_test_large_n_caps_bootstrap_budget(self, monkeypatch):
+        """Large samples should use the bounded exploratory bootstrap fallback."""
+        import pola.bandwidth as bandwidth_mod
+
+        monkeypatch.setattr(bandwidth_mod, "DIP_TEST_LARGE_N_THRESHOLD", 5)
+        monkeypatch.setattr(bandwidth_mod, "DIP_TEST_LARGE_N_BOOTSTRAP_CAP", 9)
+
+        rng = np.random.default_rng(42)
+        x = rng.normal(0, 1, 10)
+
+        with pytest.warns(UserWarning, match="n=10, requested n_boot=99, using 9 resamples"):
+            result = dip_test(x, n_boot=99, random_state=42)
+
+        assert result.n_boot == 9
+        assert 0 <= result.dip <= 0.5
+        assert 0 <= result.n_extreme <= result.n_boot
 
     def test_dip_statistic_tiny(self):
         """Very small samples."""

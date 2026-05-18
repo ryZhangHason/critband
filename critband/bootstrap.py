@@ -93,9 +93,9 @@ def bootstrap_critical_bandwidth(
     Notes
     -----
     The default interval method uses SciPy's calibrated bootstrap routine.
-    If SciPy's interval computation fails, the function falls back to a
-    manual percentile bootstrap so that a usable exploratory interval is
-    still returned.
+    If SciPy's interval computation fails or returns a degenerate interval,
+    the function falls back to a manual percentile bootstrap so that a
+    usable exploratory interval is still returned.
 
     Bootstrap resamples where critical_bandwidth fails to converge
     (success=False) are currently kept in the distribution as the best
@@ -124,6 +124,8 @@ def bootstrap_critical_bandwidth(
     }
     scipy_method_key = scipy_method_map.get(scipy_method.lower(), scipy_method)
 
+    scipy_error: Exception | None = None
+    use_manual_percentile = False
     try:
         scipy_result = scipy_bootstrap(
             (x,),
@@ -139,11 +141,24 @@ def bootstrap_critical_bandwidth(
         ci_lower = float(scipy_result.confidence_interval.low)
         ci_upper = float(scipy_result.confidence_interval.high)
         interval_method = str(scipy_method_key)
+        if (
+            not np.isfinite(ci_lower)
+            or not np.isfinite(ci_upper)
+            or ci_lower >= ci_upper
+        ):
+            scipy_error = ValueError("degenerate confidence interval")
+            use_manual_percentile = True
     except Exception as exc:
+        scipy_error = exc
+        use_manual_percentile = True
+
+    if use_manual_percentile:
         import warnings
 
+        if scipy_error is None:
+            scipy_error = RuntimeError("unknown SciPy bootstrap failure")
         warnings.warn(
-            f"SciPy bootstrap failed ({exc}); falling back to manual percentile resampling."
+            f"SciPy bootstrap failed ({scipy_error}); falling back to manual percentile resampling."
         )
         boot_samples: list[float] = []
         for _ in range(n_resamples):

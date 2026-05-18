@@ -591,10 +591,9 @@ def critical_bandwidth(
         Maximum number of iterations
     method : str, optional
         Search method:
-        - "auto" (default): intelligently selects the optimal method based
-          on data characteristics. Uses Brent for large (n≥100), well-separated
-          (trough_ratio < 0.7) data, binary search otherwise. Falls back to
-          binary search if Brent fails.
+        - "auto" (default): uses a bracketed binary search path for the
+          critical bandwidth. This is the most rigorous default because it
+          preserves the discrete mode-count transition directly.
         - "binary": pure binary search on KDE mode counts.
         - "brent": pure Brent's method using scipy.optimize.brentq on a
           continuous trough-ratio objective. Falls back to binary search
@@ -628,7 +627,8 @@ def critical_bandwidth(
     The "auto" and "binary" methods find h_crit via binary search on KDE
     mode counts. The "brent" method uses a continuous objective based on
     `_trough_ratio`: f(h) = 1 - trough_ratio when >=k modes (> 0), f(h) = -1
-    when <k modes (< 0), crossing zero at the transition.
+    when <k modes (< 0), crossing zero at the transition. The Brent path is
+    retained as an explicit exploratory option, not as the default route.
 
     dip_ratio (via _trough_ratio) is available as a descriptive bimodality
     strength measure (0 = strongly bimodal, 1 = unimodal).
@@ -682,52 +682,10 @@ def critical_bandwidth(
         except (ValueError, RuntimeError):
             h_crit, ok = _binary_search_critical(x, h_min, h_max, tol, max_iter, kernel, k)
     elif method == "auto":
-        n = len(x)
-
-        # Small sample → binary (Brent is unstable on small n)
-        if n < 100:
-            low, high = _bracket_critical(
-                x, h_min, h_max, min(10, max_iter // 3), kernel=kernel, k=k
-            )
-            h_crit, ok = _binary_search_critical(x, low, high, tol, max_iter, kernel, k)
-        else:
-            # Evaluate trough ratio at h_min as separation strength measure.
-            tr_min = _trough_ratio(x, h_min, kernel=kernel)
-
-            if tr_min < 0.7:
-                try:
-                    from scipy.optimize import brentq
-
-                    h_crit = brentq(
-                        _brent_objective,
-                        h_min,
-                        h_max,
-                        args=(x, kernel, k),
-                        xtol=tol,
-                        maxiter=max_iter,
-                    )
-                    h_test = h_crit
-                    for _ in range(20):
-                        if count_modes(x, h_test, kernel=kernel) < k:
-                            h_crit, ok = h_test, True
-                            break
-                        h_test *= 1.001
-                    else:
-                        # Verification failed, fall through
-                        low, high = _bracket_critical(
-                            x, h_min, h_max, min(10, max_iter // 3), kernel=kernel, k=k
-                        )
-                        h_crit, ok = _binary_search_critical(x, low, high, tol, max_iter, kernel, k)
-                except (ValueError, RuntimeError):
-                    low, high = _bracket_critical(
-                        x, h_min, h_max, min(10, max_iter // 3), kernel=kernel, k=k
-                    )
-                    h_crit, ok = _binary_search_critical(x, low, high, tol, max_iter, kernel, k)
-            else:
-                low, high = _bracket_critical(
-                    x, h_min, h_max, min(10, max_iter // 3), kernel=kernel, k=k
-                )
-                h_crit, ok = _binary_search_critical(x, low, high, tol, max_iter, kernel, k)
+        low, high = _bracket_critical(
+            x, h_min, h_max, min(10, max_iter // 3), kernel=kernel, k=k
+        )
+        h_crit, ok = _binary_search_critical(x, low, high, tol, max_iter, kernel, k)
     else:
         # Binary search (method="binary")
         low, high = h_min, h_max
@@ -1013,6 +971,13 @@ def detect_components(
 # ---------------------------------------------------------------------------
 
 
+# Large-sample dip tests are cubic in the sample size and become impractical
+# fast. Keep the fallback budget explicit so callers get a bounded calculation
+# rather than an accidental hours-long default run.
+DIP_TEST_LARGE_N_THRESHOLD = 400
+DIP_TEST_LARGE_N_BOOTSTRAP_CAP = 99
+
+
 @dataclass
 class DipTestResult:
     """Result of Hartigan's dip test for unimodality.
@@ -1209,17 +1174,23 @@ def dip_test(x, n_boot=999, random_state=None):
     The p-value is calibrated by sampling from the uniform distribution
     on [0, 1], which is the least favorable unimodal distribution under
     the null. This is the standard approach used by the R 'diptest' package.
+    For large samples, the function automatically caps the bootstrap budget
+    at a smaller exploratory level to keep the calculation bounded.
     """
-    if len(x) > 5000 and n_boot >= 999:
+    n = len(x)
+    if n >= DIP_TEST_LARGE_N_THRESHOLD and n_boot > DIP_TEST_LARGE_N_BOOTSTRAP_CAP:
         warnings.warn(
-            "dip_test() is expensive for large samples at the default bootstrap count; "
-            "consider a smaller n_boot or a complementary multimodality check."
+            "dip_test() is exploratory for large samples; "
+            f"n={n}, requested n_boot={n_boot}, using "
+            f"{DIP_TEST_LARGE_N_BOOTSTRAP_CAP} resamples to keep the "
+            "calculation bounded.",
+            stacklevel=2,
         )
+        n_boot = DIP_TEST_LARGE_N_BOOTSTRAP_CAP
 
     # Compute observed dip
     dip_obs = _compute_dip_statistic(x)
 
-    n = len(x)
     rng = np.random.default_rng(random_state)
 
     # Bootstrap under H0: sample from Uniform(0,1) — the least favorable
