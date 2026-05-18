@@ -217,6 +217,8 @@ class SilvermanTestResult:
         Number of bootstrap resamples under H0.
     n_extreme : int
         Number of null resamples where h_crit >= observed h_crit.
+    n_failed : int
+        Number of null resamples that did not fully converge.
     null_distribution : np.ndarray
         Array of h_crit values from null resamples.
     """
@@ -225,6 +227,7 @@ class SilvermanTestResult:
     p_value: float
     n_resamples: int
     n_extreme: int
+    n_failed: int
     null_distribution: np.ndarray
 
 
@@ -287,7 +290,8 @@ def silverman_test(
     x_mean = float(np.mean(x))
     x_var = float(np.var(x, ddof=1))
 
-    null_h_crits: list = []
+    null_h_crits: list[float] = []
+    n_failed = 0
 
     for _ in range(n_resamples):
         # Step 1: Sample from KDE with bandwidth = h_crit_obs
@@ -302,20 +306,30 @@ def silverman_test(
 
         # Step 3: Compute h_crit on null sample
         h_null, ok_null = critical_bandwidth(x_boot, **kwargs)
-        if ok_null:
-            null_h_crits.append(h_null)
+        null_h_crits.append(float(h_null))
+        if not ok_null:
+            n_failed += 1
+
+    if n_failed > 0:
+        import warnings
+
+        warnings.warn(
+            f"{n_failed}/{n_resamples} null resamples did not fully converge; "
+            "best estimates were retained in the null distribution.",
+            stacklevel=2,
+        )
 
     null_arr = np.array(null_h_crits)
-    n_success = len(null_arr)
 
     # p-value with continuity correction (Davison & Hinkley)
     n_extreme = int(np.sum(null_arr >= h_crit_obs))
-    p_value = (n_extreme + 1) / (n_success + 1)
+    p_value = (n_extreme + 1) / (n_resamples + 1)
 
     return SilvermanTestResult(
         h_crit=h_crit_obs,
         p_value=p_value,
         n_resamples=n_resamples,
         n_extreme=n_extreme,
+        n_failed=n_failed,
         null_distribution=null_arr,
     )

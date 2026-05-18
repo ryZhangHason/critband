@@ -126,7 +126,8 @@ class TestSilvermanTest:
         result = silverman_test(x, n_resamples=99)
         assert result.p_value < 0.05
         assert result.h_crit > 0
-        assert len(result.null_distribution) > 0
+        assert len(result.null_distribution) == 99
+        assert 0 <= result.n_failed <= result.n_resamples
 
     def test_silverman_test_unimodal_data(self):
         """Unimodal data should give large p-value."""
@@ -158,7 +159,8 @@ class TestSilvermanTest:
         """Null distribution should have reasonable length."""
         x = BENCHMARK_CASES["moderate_separation"].generator(42)
         result = silverman_test(x, n_resamples=99)
-        assert len(result.null_distribution) > 50  # most should converge
+        assert len(result.null_distribution) == 99
+        assert 0 <= result.n_failed <= result.n_resamples
 
 
 class TestBootstrapStability:
