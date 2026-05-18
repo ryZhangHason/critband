@@ -217,8 +217,8 @@ This section records validation against R's `multimode` package across 12 benchm
 
 | Feature | critband | multimode |
 |---------|:----:|:---------:|
-| Critical bandwidth | ✅ (mode-count test, k >= 2) | ✅ (mode-count test, mod0 >= 1) |
-| **Mode-count detection** | ✅ (parameterized by k) | ✅ (parameterized by mod0) |
+| Critical bandwidth | ✅ (k-based mode-count test, k >= 2) | ✅ (mod0-based mode-count test, mod0 >= 1) |
+| **Mode-count detection** | ✅ (threshold parameter k) | ✅ (threshold parameter mod0) |
 | **Bimodality strength** | ✅ (interpretable) | ❌ |
 | **Excess mass test** | ✅ | ✅ |
 | **Silverman's bootstrap test** | ✅ | ✅ |
