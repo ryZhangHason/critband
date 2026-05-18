@@ -64,6 +64,28 @@ class TestBootstrapCriticalBandwidth:
         result = bootstrap_critical_bandwidth(x, n_resamples=30, random_state=42)
         assert result.ci_lower < result.ci_upper
 
+    def test_default_interval_method_is_percentile(self):
+        """The default CI method should be the more robust percentile interval."""
+        np.random.seed(42)
+        x = np.concatenate([np.random.normal(-2, 0.3, 200), np.random.normal(2, 0.3, 200)])
+
+        result = bootstrap_critical_bandwidth(x, n_resamples=20, random_state=42)
+        assert result.interval_method == "percentile"
+
+    @pytest.mark.parametrize("method", ["BCa", "basic", "percentile"])
+    def test_explicit_interval_methods_work(self, method):
+        """Explicit interval method choices should all return finite results."""
+        np.random.seed(42)
+        x = np.concatenate([np.random.normal(-1, 0.5, 100), np.random.normal(1, 0.5, 100)])
+
+        result = bootstrap_critical_bandwidth(
+            x, n_resamples=15, random_state=42, ci_method=method
+        )
+        assert result.interval_method == method
+        assert np.isfinite(result.ci_lower)
+        assert np.isfinite(result.ci_upper)
+        assert result.ci_lower < result.ci_upper
+
     def test_contains_original_h_crit(self):
         """The bootstrap distribution should contain the original h_crit."""
         np.random.seed(42)

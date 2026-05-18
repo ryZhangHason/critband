@@ -900,6 +900,19 @@ class TestCriticalBandwidthCI:
         h2, ok2 = critical_bandwidth(x, return_ci=False)
         assert h1 == h2 and ok1 == ok2
 
+    def test_ci_result_provenance(self):
+        """return_ci_result=True returns the bootstrap result object."""
+        from pola import BootstrapResult
+
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        h_crit, ok, boot = critical_bandwidth(
+            x, return_ci=True, return_ci_result=True, ci_resamples=20, ci_random_state=42
+        )
+        assert ok
+        assert isinstance(boot, BootstrapResult)
+        assert boot.ci_lower < h_crit < boot.ci_upper
+        assert boot.interval_method in {"BCa", "basic", "percentile"}
+
 
 class TestDipTest:
     """Test Hartigan's dip test for unimodality."""

@@ -566,6 +566,7 @@ def critical_bandwidth(
     k: int = 2,
     kernel: Union[str, Callable] = "gaussian",
     return_ci: bool = False,
+    return_ci_result: bool = False,
     ci_resamples: int = 999,
     ci_alpha: float = 0.05,
     ci_random_state: Optional[int] = None,
@@ -608,6 +609,9 @@ def critical_bandwidth(
         "uniform", "triangular". Also accepts callables.
     return_ci : bool, optional
         If True, also return a bootstrap confidence interval (default False).
+    return_ci_result : bool, optional
+        If True and return_ci=True, also return the BootstrapResult object
+        carrying interval method and failure-count provenance.
     ci_resamples : int, optional
         Number of bootstrap resamples for CI (default 999).
     ci_alpha : float, optional
@@ -621,6 +625,8 @@ def critical_bandwidth(
         When return_ci=False (default): (critical_bandwidth_value, convergence_success)
         When return_ci=True: (critical_bandwidth_value, convergence_success,
             ci_lower, ci_upper, standard_error)
+        When return_ci=True and return_ci_result=True:
+            (critical_bandwidth_value, convergence_success, BootstrapResult)
 
     Notes
     -----
@@ -636,6 +642,8 @@ def critical_bandwidth(
     When return_ci=True, the function also computes a bootstrap confidence interval
     via bootstrap_critical_bandwidth() and returns (h_crit, ok, ci_lower, ci_upper, se).
     Bootstrap resamples that fail to converge are excluded from the CI calculation.
+    When return_ci_result=True, the full BootstrapResult is returned for callers
+    that need interval provenance.
     """
     _validate_input(x)
 
@@ -713,6 +721,8 @@ def critical_bandwidth(
             random_state=ci_random_state,
             **boot_kwargs,
         )
+        if return_ci_result:
+            return h_crit, ok, boot
         return h_crit, ok, boot.ci_lower, boot.ci_upper, boot.standard_error
 
     return h_crit, ok

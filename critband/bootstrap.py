@@ -49,7 +49,7 @@ class BootstrapResult:
     n_resamples: int
     confidence_level: float
     n_failed: int = 0
-    interval_method: str = "BCa"
+    interval_method: str = "percentile"
 
 
 def bootstrap_critical_bandwidth(
@@ -57,7 +57,7 @@ def bootstrap_critical_bandwidth(
     n_resamples: int = 999,
     alpha: float = 0.05,
     random_state: Optional[int] = None,
-    ci_method: str = "BCa",
+    ci_method: str = "percentile",
     **kwargs: Any,
 ) -> BootstrapResult:
     """
@@ -78,7 +78,7 @@ def bootstrap_critical_bandwidth(
         Random seed for reproducible resampling.
     ci_method : str, optional
         Bootstrap interval method. Supported values are "BCa", "percentile",
-        and "basic". Default is "BCa".
+        and "basic". Default is "percentile".
     **kwargs
         Additional keyword arguments passed through to critical_bandwidth().
         See critical_bandwidth() documentation for supported options
@@ -92,7 +92,7 @@ def bootstrap_critical_bandwidth(
 
     Notes
     -----
-    The default interval method uses SciPy's calibrated bootstrap routine.
+    The default interval method uses SciPy's percentile bootstrap routine.
     If SciPy's interval computation fails or returns a degenerate interval,
     the function falls back to a manual percentile bootstrap so that a
     usable exploratory interval is still returned.
