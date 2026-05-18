@@ -913,7 +913,20 @@ class TestCriticalBandwidthCI:
         assert boot.interval_method == "percentile"
         assert boot.n_resamples == 20
         assert 0 <= boot.n_failed <= boot.n_resamples
-        assert boot.interval_method in {"BCa", "basic", "percentile"}
+
+    def test_ci_tuple_metadata(self):
+        """return_ci_metadata=True returns provenance in the tuple path."""
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        result = critical_bandwidth(
+            x, return_ci=True, return_ci_metadata=True, ci_resamples=20, ci_random_state=42
+        )
+        assert isinstance(result, tuple) and len(result) == 7
+        h_crit, ok, ci_low, ci_high, se, interval_method, n_failed = result
+        assert ok
+        assert ci_low < ci_high
+        assert se > 0
+        assert interval_method == "percentile"
+        assert 0 <= n_failed <= 20
 
 
 class TestDipTest:

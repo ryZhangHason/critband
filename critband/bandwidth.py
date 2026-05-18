@@ -14,6 +14,7 @@ from scipy import signal
 CriticalBandwidthReturn = Union[
     Tuple[float, bool],
     Tuple[float, bool, float, float, float],
+    Tuple[float, bool, float, float, float, str, int],
 ]
 
 # ---------------------------------------------------------------------------
@@ -567,6 +568,7 @@ def critical_bandwidth(
     kernel: Union[str, Callable] = "gaussian",
     return_ci: bool = False,
     return_ci_result: bool = False,
+    return_ci_metadata: bool = False,
     ci_resamples: int = 999,
     ci_alpha: float = 0.05,
     ci_random_state: Optional[int] = None,
@@ -612,6 +614,9 @@ def critical_bandwidth(
     return_ci_result : bool, optional
         If True and return_ci=True, also return the BootstrapResult object
         carrying interval method and failure-count provenance.
+    return_ci_metadata : bool, optional
+        If True and return_ci=True, return a metadata-bearing CI tuple with
+        interval method and failure count appended.
     ci_resamples : int, optional
         Number of bootstrap resamples for CI (default 999).
     ci_alpha : float, optional
@@ -627,6 +632,9 @@ def critical_bandwidth(
             ci_lower, ci_upper, standard_error)
         When return_ci=True and return_ci_result=True:
             (critical_bandwidth_value, convergence_success, BootstrapResult)
+        When return_ci=True and return_ci_metadata=True:
+            (critical_bandwidth_value, convergence_success, ci_lower, ci_upper,
+             standard_error, interval_method, n_failed)
 
     Notes
     -----
@@ -643,7 +651,9 @@ def critical_bandwidth(
     via bootstrap_critical_bandwidth() and returns (h_crit, ok, ci_lower, ci_upper, se).
     Bootstrap resamples that fail to converge are excluded from the CI calculation.
     When return_ci_result=True, the full BootstrapResult is returned for callers
-    that need interval provenance.
+        that need interval provenance.
+    When return_ci_metadata=True, the tuple path includes interval provenance
+        without requiring callers to handle the dataclass directly.
     """
     _validate_input(x)
 
@@ -723,6 +733,16 @@ def critical_bandwidth(
         )
         if return_ci_result:
             return h_crit, ok, boot
+        if return_ci_metadata:
+            return (
+                h_crit,
+                ok,
+                boot.ci_lower,
+                boot.ci_upper,
+                boot.standard_error,
+                boot.interval_method,
+                boot.n_failed,
+            )
         return h_crit, ok, boot.ci_lower, boot.ci_upper, boot.standard_error
 
     return h_crit, ok
