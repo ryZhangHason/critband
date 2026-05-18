@@ -176,7 +176,7 @@ uv run python -m pytest tests/ -v
 
 ## Current validation status
 
-WS1 calibration has been run on the fixed design grid and is kept as a validation artifact only. The result is useful for implementation review, but it does not yet justify calibrated threshold language in the paper.
+WS1 calibration has been run on the fixed design grid and is kept as a validation artifact only. The repository now passes the strict full-suite acceptance run, but WS1 remains descriptive rather than threshold-setting.
 
 ## Why critband?
 
