@@ -193,6 +193,6 @@ class TestBootstrapStability:
         # Use constant data where convergence fails
         x = np.ones(20) * 5.0
         result = bootstrap_critical_bandwidth(x, n_resamples=10)
-        if result.n_failed == result.n_resamples:
-            assert np.isnan(result.ci_lower)
-            assert np.isnan(result.ci_upper)
+        assert result.n_failed == result.n_resamples
+        assert np.isnan(result.ci_lower)
+        assert np.isnan(result.ci_upper)

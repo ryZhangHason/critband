@@ -115,6 +115,30 @@ def bootstrap_critical_bandwidth(
         h_crit_boot, _ = critical_bandwidth(sample, **kwargs)
         return float(h_crit_boot)
 
+    def _manual_bootstrap() -> tuple[np.ndarray, int]:
+        boot_samples: list[float] = []
+        n_failed_local = 0
+        for _ in range(n_resamples):
+            resample = rng.choice(x, size=n, replace=True)
+            h_crit_boot, ok = critical_bandwidth(resample, **kwargs)
+            boot_samples.append(float(h_crit_boot))
+            if not ok:
+                n_failed_local += 1
+        return np.asarray(boot_samples, dtype=float), n_failed_local
+
+    def _all_failed_result(interval_method: str, boot_arr: np.ndarray, n_failed_local: int) -> BootstrapResult:
+        return BootstrapResult(
+            h_crit=h_crit_original,
+            ci_lower=float("nan"),
+            ci_upper=float("nan"),
+            standard_error=float("nan"),
+            distribution=boot_arr,
+            n_resamples=n_resamples,
+            confidence_level=1 - alpha,
+            n_failed=n_failed_local,
+            interval_method=interval_method,
+        )
+
     scipy_method = ci_method.strip()
     scipy_method_map = {
         "bca": "BCa",
@@ -124,64 +148,72 @@ def bootstrap_critical_bandwidth(
     }
     scipy_method_key = scipy_method_map.get(scipy_method.lower(), scipy_method)
 
-    scipy_error: Exception | None = None
-    use_manual_percentile = False
-    try:
-        scipy_result = scipy_bootstrap(
-            (x,),
-            _statistic,
-            n_resamples=n_resamples,
-            confidence_level=1 - alpha,
-            method=scipy_method_key,
-            random_state=rng,
-            vectorized=False,
-            paired=False,
-        )
-        boot_arr = np.asarray(scipy_result.bootstrap_distribution, dtype=float).reshape(-1)
-        ci_lower = float(scipy_result.confidence_interval.low)
-        ci_upper = float(scipy_result.confidence_interval.high)
-        interval_method = str(scipy_method_key)
-        if (
-            not np.isfinite(ci_lower)
-            or not np.isfinite(ci_upper)
-            or ci_lower >= ci_upper
-        ):
-            scipy_error = ValueError("degenerate confidence interval")
-            use_manual_percentile = True
-    except Exception as exc:
-        scipy_error = exc
-        use_manual_percentile = True
-
-    if use_manual_percentile:
-        import warnings
-
-        if scipy_error is None:
-            scipy_error = RuntimeError("unknown SciPy bootstrap failure")
-        warnings.warn(
-            f"SciPy bootstrap failed ({scipy_error}); falling back to manual percentile resampling."
-        )
-        boot_samples: list[float] = []
-        for _ in range(n_resamples):
-            resample = rng.choice(x, size=n, replace=True)
-            h_crit_boot, _ = critical_bandwidth(resample, **kwargs)
-            boot_samples.append(float(h_crit_boot))
-        boot_arr = np.asarray(boot_samples, dtype=float)
+    if scipy_method_key == "percentile":
+        boot_arr, n_failed = _manual_bootstrap()
         if len(boot_arr) == 0:
-            return BootstrapResult(
-                h_crit=h_crit_original,
-                ci_lower=float("nan"),
-                ci_upper=float("nan"),
-                standard_error=float("nan"),
-                distribution=boot_arr,
-                n_resamples=n_resamples,
-                confidence_level=1 - alpha,
-                n_failed=n_failed,
-                interval_method="percentile",
-            )
+            return _all_failed_result("percentile", boot_arr, n_failed)
+        if n_failed == n_resamples:
+            return _all_failed_result("percentile", boot_arr, n_failed)
         p_low = 100 * alpha / 2
         p_high = 100 * (1 - alpha / 2)
         ci_lower, ci_upper = np.percentile(boot_arr, [p_low, p_high])
         interval_method = "percentile"
+    elif scipy_method_key == "basic":
+        boot_arr, n_failed = _manual_bootstrap()
+        if len(boot_arr) == 0:
+            return _all_failed_result("basic", boot_arr, n_failed)
+        if n_failed == n_resamples:
+            return _all_failed_result("basic", boot_arr, n_failed)
+        p_low = 100 * alpha / 2
+        p_high = 100 * (1 - alpha / 2)
+        q_low, q_high = np.percentile(boot_arr, [p_low, p_high])
+        ci_lower = float(2 * h_crit_original - q_high)
+        ci_upper = float(2 * h_crit_original - q_low)
+        interval_method = "basic"
+    else:
+        scipy_error: Exception | None = None
+        use_manual_percentile = False
+        import warnings
+
+        try:
+            scipy_result = scipy_bootstrap(
+                (x,),
+                _statistic,
+                n_resamples=n_resamples,
+                confidence_level=1 - alpha,
+                method=scipy_method_key,
+                random_state=rng,
+                vectorized=False,
+                paired=False,
+            )
+            boot_arr = np.asarray(scipy_result.bootstrap_distribution, dtype=float).reshape(-1)
+            ci_lower = float(scipy_result.confidence_interval.low)
+            ci_upper = float(scipy_result.confidence_interval.high)
+            interval_method = str(scipy_method_key)
+            if (
+                not np.isfinite(ci_lower)
+                or not np.isfinite(ci_upper)
+                or ci_lower >= ci_upper
+            ):
+                scipy_error = ValueError("degenerate confidence interval")
+                use_manual_percentile = True
+        except Exception as exc:
+            scipy_error = exc
+            use_manual_percentile = True
+
+        if use_manual_percentile:
+            warnings.warn(
+                f"SciPy bootstrap failed ({scipy_error}); falling back to manual percentile resampling."
+            )
+            boot_arr, n_failed = _manual_bootstrap()
+            if len(boot_arr) == 0:
+                return _all_failed_result("percentile", boot_arr, n_failed)
+            if n_failed == n_resamples:
+                return _all_failed_result("percentile", boot_arr, n_failed)
+            p_low = 100 * alpha / 2
+            p_high = 100 * (1 - alpha / 2)
+            ci_lower, ci_upper = np.percentile(boot_arr, [p_low, p_high])
+            interval_method = "percentile"
 
     # Standard error: guard against single-element distribution
     if len(boot_arr) < 2:

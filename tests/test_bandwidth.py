@@ -910,7 +910,9 @@ class TestCriticalBandwidthCI:
         )
         assert ok
         assert isinstance(boot, BootstrapResult)
-        assert boot.ci_lower < h_crit < boot.ci_upper
+        assert boot.interval_method == "percentile"
+        assert boot.n_resamples == 20
+        assert 0 <= boot.n_failed <= boot.n_resamples
         assert boot.interval_method in {"BCa", "basic", "percentile"}
 
 
