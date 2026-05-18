@@ -244,6 +244,15 @@ class TestModeTestDispatcher:
         assert result.method.startswith("Fisher and Marron")
         assert result.p_value >= 0.0
 
+    def test_modetest_ch_and_acr_smoke(self):
+        x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
+        ch = modetest(x, method="CH", B=20, random_state=42)
+        acr = modetest(x, method="ACR", B=20, random_state=42, lowsup=-5.0, uppsup=5.0)
+        assert ch.statistic_name == "Excess mass"
+        assert acr.statistic_name == "Excess mass"
+        assert ch.p_value >= 0.0
+        assert acr.p_value >= 0.0
+
     def test_silverman_test_reproducible(self):
         """Same random_state gives same result."""
         x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)

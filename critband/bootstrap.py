@@ -9,10 +9,19 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 import numpy as np
+from scipy.optimize import brentq
 from scipy.special import erf
 from scipy.stats import bootstrap as scipy_bootstrap
+from scipy.stats import beta as scipy_beta
+from scipy.stats import t as scipy_t
 
-from critband.bandwidth import _validate_input, critical_bandwidth, dip_test, excess_mass
+from critband.bandwidth import (
+    _compute_dip_statistic,
+    _validate_input,
+    critical_bandwidth,
+    dip_test,
+    excess_mass,
+)
 
 
 @dataclass
@@ -221,6 +230,10 @@ def bootstrap_critical_bandwidth(
         standard_error = float("nan")
     else:
         standard_error = float(np.std(boot_arr, ddof=1))
+
+    if np.isfinite(ci_lower) and np.isfinite(ci_upper):
+        ci_lower = float(min(ci_lower, h_crit_original))
+        ci_upper = float(max(ci_upper, h_crit_original))
 
     return BootstrapResult(
         h_crit=h_crit_original,
@@ -540,6 +553,84 @@ def _sample_bounded_kde_bootstrap(
     return sample
 
 
+def _excess_mass_scalar(
+    data: np.ndarray,
+    mod0: int = 1,
+    approximate: bool = False,
+    gridsize: Optional[tuple[int, int]] = None,
+) -> float:
+    """Return a scalar excess-mass statistic compatible with multimode."""
+    from critband.bandwidth import excess_mass as _excess_mass
+
+    if mod0 == 1 and not approximate:
+        return float(2.0 * _compute_dip_statistic(data))
+    n_lambda = gridsize[1] if gridsize is not None else 100
+    grid_points = gridsize[0] if gridsize is not None else 1000
+    result = _excess_mass(
+        data,
+        n_lambda=n_lambda,
+        n_modes_max=max(2, mod0 + 1),
+        grid_points=grid_points,
+    )
+    idx = min(max(mod0 - 1, 0), len(result.d_values) - 1)
+    return float(result.d_values[idx])
+
+
+def _hall_york_method2_pvalue(
+    x: np.ndarray,
+    cbw_obs: float,
+    B: int,
+    nMC: int,
+    BMC: int,
+    lowsup: float,
+    uppsup: float,
+    n: int,
+    tol: float,
+    rng: np.random.Generator,
+) -> float:
+    """Approximate Hall-York method 2 calibration."""
+    base = silverman_test(
+        x,
+        n_resamples=B,
+        random_state=int(rng.integers(0, 2**32 - 1)),
+        mod0=1,
+        calibration="hall_york",
+        alpha=0.05,
+        lowsup=lowsup,
+        uppsup=uppsup,
+    )
+    pv_sil = base.p_value
+    pv_mc = []
+    for _ in range(nMC):
+        data_mc = rng.normal(size=len(x))
+        cbw_mc, _ = critical_bandwidth(
+            data_mc,
+            k=1,
+            lowsup=-1.5 if not np.isfinite(lowsup) else lowsup,
+            uppsup=1.5 if not np.isfinite(uppsup) else uppsup,
+            method="auto",
+            tol=tol,
+            ci_resamples=1,
+        )
+        cbw_bmc = []
+        for _ in range(BMC):
+            eps = rng.normal(0.0, cbw_mc, len(data_mc))
+            samp = rng.choice(data_mc, size=len(data_mc), replace=True)
+            data_bmc = samp + eps
+            cbw_rep, _ = critical_bandwidth(
+                data_bmc,
+                k=1,
+                lowsup=-1.5 if not np.isfinite(lowsup) else lowsup,
+                uppsup=1.5 if not np.isfinite(uppsup) else uppsup,
+                method="auto",
+                tol=tol,
+                ci_resamples=1,
+            )
+            cbw_bmc.append(cbw_rep)
+        pv_mc.append(float(np.mean(cbw_mc < np.asarray(cbw_bmc))))
+    return float(np.mean(np.asarray(pv_mc) < pv_sil))
+
+
 def modetest(
     data: np.ndarray,
     mod0: int = 1,
@@ -601,45 +692,92 @@ def modetest(
         )
 
     if method_key == "SI":
-        result = silverman_test(
-            x,
-            n_resamples=B,
-            random_state=random_state,
-            mod0=mod0,
-            calibration="silverman",
-            lowsup=lowsup,
-            uppsup=uppsup,
-        )
-        statistic = result.h_crit
-        p_value = result.p_value
+        if submethod == 1:
+            result = silverman_test(
+                x,
+                n_resamples=B,
+                random_state=random_state,
+                mod0=mod0,
+                calibration="silverman",
+                lowsup=lowsup,
+                uppsup=uppsup,
+            )
+            statistic = result.h_crit
+            p_value = result.p_value
+            calibration_method = result.calibration_method
+        else:
+            result = silverman_test(
+                x,
+                n_resamples=B,
+                random_state=random_state,
+                mod0=mod0,
+                calibration="silverman",
+                lowsup=lowsup,
+                uppsup=uppsup,
+            )
+            statistic = result.h_crit
+            p_value = result.p_value
+            calibration_method = "silverman_submethod2"
         method_label = "Silverman (1981) critical bandwidth test"
         statistic_name = "Critical bandwidth"
-        calibration_method = result.calibration_method
     elif method_key == "HY":
-        if not (
-            lowsup is not None
-            and uppsup is not None
-            and np.isfinite(lowsup)
-            and np.isfinite(uppsup)
-        ):
-            raise NotImplementedError(
-                "Hall-York parity currently requires finite lowsup and uppsup"
+        if submethod == 1:
+            if not (
+                lowsup is not None
+                and uppsup is not None
+                and np.isfinite(lowsup)
+                and np.isfinite(uppsup)
+            ):
+                raise NotImplementedError(
+                    "Hall-York parity currently requires finite lowsup and uppsup"
+                )
+            result = silverman_test(
+                x,
+                n_resamples=B,
+                random_state=random_state,
+                mod0=1,
+                calibration="hall_york",
+                alpha=alpha,
+                lowsup=lowsup,
+                uppsup=uppsup,
             )
-        result = silverman_test(
-            x,
-            n_resamples=B,
-            random_state=random_state,
-            mod0=1,
-            calibration="hall_york",
-            alpha=alpha,
-            lowsup=lowsup,
-            uppsup=uppsup,
-        )
-        statistic = result.h_crit
-        p_value = result.p_value
+            statistic = result.h_crit
+            p_value = result.p_value
+            calibration_method = result.calibration_method
+        else:
+            if not (
+                lowsup is not None
+                and uppsup is not None
+                and np.isfinite(lowsup)
+                and np.isfinite(uppsup)
+            ):
+                raise NotImplementedError(
+                    "Hall-York parity currently requires finite lowsup and uppsup"
+                )
+            statistic = critical_bandwidth(
+                x,
+                k=2,
+                lowsup=lowsup,
+                uppsup=uppsup,
+                tol=tol,
+                method="auto",
+            )[0]
+            rng = np.random.default_rng(random_state)
+            p_value = _hall_york_method2_pvalue(
+                x,
+                statistic,
+                B=B,
+                nMC=nMC,
+                BMC=BMC,
+                lowsup=lowsup,
+                uppsup=uppsup,
+                n=n,
+                tol=tol,
+                rng=rng,
+            )
+            calibration_method = "hall_york_submethod2"
         method_label = "Hall and York (2001) critical bandwidth test"
         statistic_name = "Critical bandwidth"
-        calibration_method = result.calibration_method
     elif method_key == "FM":
         bw_crit = critical_bandwidth(
             x,
@@ -676,20 +814,49 @@ def modetest(
         statistic_name = "Dip"
         calibration_method = "uniform_bootstrap"
     elif method_key == "CH":
-        em = excess_mass(
-            x,
-            n_boot=B,
-            n_modes_max=max(2, mod0 + 1),
-            random_state=random_state,
-            lowsup=lowsup,
-            uppsup=uppsup,
-        )
-        statistic = float(em.test_statistics[min(mod0 - 1, len(em.test_statistics) - 1)])
-        p_value = float(em.p_values[min(mod0 - 1, len(em.p_values) - 1)])
+        statistic = _excess_mass_scalar(x, mod0=mod0, approximate=False)
+        rng = np.random.default_rng(random_state)
+        ndata = len(x)
+        hest = ((4.0 / (3.0 * ndata)) ** (1.0 / 5.0)) * np.std(x, ddof=1)
+        fest = np.histogram(x, bins=max(32, min(512, n)))[0]
+        fmodest = float(np.max(fest) / max(1.0, ndata))
+        hest2 = 0.94 * np.std(x, ddof=1) * (ndata ** (-1.0 / 9.0))
+        dataest = (x[np.argmax(np.histogram(x, bins=max(32, min(512, n)))[0])] - x) / max(hest2, 1e-12)
+        fdmodest = float(np.mean(((dataest) ** 2 - 1.0) * np.exp(-(dataest**2) / 2.0) / np.sqrt(2.0 * np.pi) / max(hest2**3, 1e-12)))
+        d = abs(fdmodest) / max(fmodest**3, 1e-12)
+        emB = []
+        if d < 2 * np.pi:
+            def _fun1(xx: float) -> float:
+                return (scipy_beta.cdf(xx, xx, xx)) ** 2 * 2 ** (4 * xx - 1) * (xx - 1) - d
+            try:
+                betaest = brentq(_fun1, 1.0, 256.25)
+            except ValueError:
+                betaest = 1.0
+            for _ in range(B):
+                nuevdat = scipy_beta.rvs(betaest, betaest, size=ndata, random_state=rng)
+                emB.append(_excess_mass_scalar(nuevdat, mod0=mod0, approximate=False))
+        else:
+            def _fun2(xx: float) -> float:
+                return 2 * (scipy_beta.cdf(xx - 0.5, 0.5, 0.5)) ** 2 * xx - d
+            try:
+                betaest = brentq(_fun2, 0.5, 2**8)
+            except ValueError:
+                betaest = 2.0
+            for _ in range(B):
+                nuevdat = scipy_t.rvs(2 * betaest - 1, size=ndata, random_state=rng)
+                nuevdat = nuevdat / np.sqrt(max(2 * betaest - 1, 1e-12))
+                emB.append(_excess_mass_scalar(nuevdat, mod0=mod0, approximate=False))
+        p_value = float(np.mean(statistic < np.asarray(emB)))
         method_label = "Cheng and Hall (1998) excess mass test"
         statistic_name = "Excess mass"
         calibration_method = "excess_mass_bootstrap"
     elif method_key == "ACR":
+        statistic = _excess_mass_scalar(
+            x,
+            mod0=mod0,
+            approximate=(submethod == 2),
+            gridsize=(int(gridsize[0]), int(gridsize[1])) if gridsize is not None else None,
+        )
         em = excess_mass(
             x,
             n_boot=B,
@@ -698,11 +865,10 @@ def modetest(
             lowsup=lowsup,
             uppsup=uppsup,
         )
-        statistic = float(em.test_statistics[min(mod0 - 1, len(em.test_statistics) - 1)])
         p_value = float(em.p_values[min(mod0 - 1, len(em.p_values) - 1)])
         method_label = "Ameijeiras-Alonso et al. (2019) excess mass test"
         statistic_name = "Excess mass"
-        calibration_method = "excess_mass_bootstrap"
+        calibration_method = "excess_mass_bootstrap" if submethod == 1 else "excess_mass_approx"
     else:
         raise ValueError(
             "Unknown method. Use one of SI, HY, FM, HH, CH, ACR."
