@@ -50,4 +50,4 @@ All dependencies are pure Python. The core algorithm requires only `numpy` and `
 
 # References
 
-Silverman (1981) introduced the critical bandwidth test for multimodality using kernel density estimates [@silverman1981]. Hartigan & Hartigan (1985) proposed the dip test of unimodality as a complementary nonparametric approach [@hartigan1985]. The package and its validation are described in detail in the arXiv preprint at https://arxiv.org/abs/XXXX.XXXXX.
+Silverman (1981) introduced the critical bandwidth test for multimodality using kernel density estimates [@silverman1981]. Hartigan & Hartigan (1985) proposed the dip test of unimodality as a complementary nonparametric approach [@hartigan1985]. The package and its validation are described in detail in the arXiv preprint at https://arxiv.org/abs/2605.18686.

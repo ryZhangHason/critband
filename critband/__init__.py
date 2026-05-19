@@ -33,7 +33,7 @@ from .bootstrap import (
     silverman_test,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.2.3"
 __all__ = [
     "silverman_bandwidth",
     "critical_bandwidth",

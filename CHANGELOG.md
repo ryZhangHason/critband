@@ -1,9 +1,20 @@
 # Changelog
 
-All notable changes to **pola** are documented in this file.
+All notable changes to **critband** are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.2.3] - 2026-05-19
+
+### Added
+- Added arXiv paper link: <https://arxiv.org/abs/2605.18686>.
+- Added README badges for PyPI version, supported Python versions, arXiv, and license.
+- Added the arXiv paper URL to package project metadata.
+
+### Changed
+- Bumped release metadata to 0.2.3 across `pyproject.toml`, `critband.__version__`, `pola.__version__`, README, and `CITATION.cff`.
+- Renamed the public-facing Gaussian benchmark label from "Heavy-tailed bimodal" to "Wide-component bimodal"; the internal benchmark key is unchanged for compatibility.
 
 ## [0.1.1] - 2026-05-16
 

@@ -1,6 +1,6 @@
 [project]
 name = "critband"
-version = "0.2.2"
+version = "0.2.3"
 authors = [
   { name = "Ruiyu Zhang" },
   { name = "Qihao Wang" },
@@ -67,6 +67,7 @@ Homepage = "https://github.com/ryZhangHason/Polarization-CBW"
 "Bug Tracker" = "https://github.com/ryZhangHason/Polarization-CBW/issues"
 Documentation = "https://github.com/ryZhangHason/Polarization-CBW"
 Source = "https://github.com/ryZhangHason/Polarization-CBW"
+Paper = "https://arxiv.org/abs/2605.18686"
 
 [build-system]
 requires = ["setuptools >= 61.0"]

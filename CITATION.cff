@@ -1,6 +1,6 @@
 cff-version: 1.2.0
-message: "If you use pola in your research, please cite it."
-title: "pola: Critical Bandwidth Analysis for Bimodal Distributions in Python"
+message: "If you use critband in your research, please cite the package and arXiv paper."
+title: "critband: Critical Bandwidth Analysis for Multimodal Distributions in Python"
 authors:
   - family-names: Zhang
     given-names: Ruiyu
@@ -8,8 +8,9 @@ authors:
   - family-names: Wang
     given-names: Qihao
     orcid: https://orcid.org/0000-0000-0000-0000
-version: 0.1.0
-date-released: 2026-05-15
+version: 0.2.3
+date-released: 2026-05-19
 url: "https://github.com/ryZhangHason/Polarization-CBW"
 repository-code: "https://github.com/ryZhangHason/Polarization-CBW"
+abstract: "critband is a Python package for critical bandwidth analysis and multimodality diagnostics in kernel density estimation. The accompanying arXiv paper is available at https://arxiv.org/abs/2605.18686."
 license: Apache-2.0

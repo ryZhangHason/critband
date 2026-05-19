@@ -1,12 +1,17 @@
-# critband 0.2.2 — Critical Bandwidth Analysis of Multimodal Distributions
+# critband — Critical Bandwidth Analysis of Multimodal Distributions
 
-`critband` is the release name for `v0.2.2` on GitHub and PyPI.
+[![PyPI version](https://img.shields.io/pypi/v/critband.svg)](https://pypi.org/project/critband/)
+[![Python versions](https://img.shields.io/pypi/pyversions/critband.svg)](https://pypi.org/project/critband/)
+[![arXiv](https://img.shields.io/badge/arXiv-2605.18686-b31b1b.svg)](https://arxiv.org/abs/2605.18686)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
+`critband` is the release name for `v0.2.3` on GitHub and PyPI.
 
 `critband` is a Python package for analyzing **critical bandwidth** and related multimodality structure in kernel density estimation (KDE).
 
 It finds the smallest bandwidth where a KDE transitions from `k`-modal to fewer modes, and it also exposes related summaries such as `bimodality_strength()` and `excess_mass()`.
 
-Legacy compatibility: `pola` remains available as the historical package name for existing code.
+Paper: Zhang, R., & Wang, Q. (2026). *critband: Critical Bandwidth Analysis for Multimodal Distributions in Python*. arXiv:2605.18686. https://arxiv.org/abs/2605.18686
 
 ## Quick Start
 
@@ -238,7 +243,7 @@ This section records validation against R's `multimode` package across 12 benchm
 | Extreme separation | 400 | 4.6987 | 0.000 | ✅ Both detect bimodality |
 | Trimodal | 450 | 1.3824 | 0.000 | ✅ critband finds 3 modes; R detects multimodality |
 | Skewed bimodal | 500 | 1.1417 | 0.000 | ✅ Both detect bimodality |
-| Heavy-tailed bimodal | 400 | 2.7109 | 0.000 | ✅ Both detect bimodality |
+| Wide-component bimodal | 400 | 2.7109 | 0.000 | ✅ Both detect bimodality |
 | Near unimodal | 600 | 0.4186 | 0.055 | ✅ critband flags weak; R agrees (n.s.) |
 | Small sample bimodal | 60 | 1.8608 | 0.000 | ✅ Both detect bimodality (small n) |
 | Overlapping variances | 500 | 0.4598 | 0.045 | ✅ critband flags weak; R agrees (n.s.) |

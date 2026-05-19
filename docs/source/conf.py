@@ -1,4 +1,4 @@
-"""Sphinx configuration for pola documentation."""
+"""Sphinx configuration for critband documentation."""
 
 import sys
 from pathlib import Path
@@ -6,10 +6,10 @@ from pathlib import Path
 # Add project root to path so autodoc can find the package
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-project = "pola"
+project = "critband"
 copyright = "2026, Ruiyu Zhang"
 author = "Ruiyu Zhang"
-release = "0.1.0"
+release = "0.2.3"
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -39,7 +39,7 @@ exclude_patterns = []
 
 html_theme = "furo"
 html_static_path = ["_static"]
-html_title = "pola — Critical Bandwidth for Bimodal Distributions"
+html_title = "critband — Critical Bandwidth for Multimodal Distributions"
 html_theme_options = {
     "source_repository": "https://github.com/ryZhangHason/Polarization-CBW/",
     "source_branch": "main",

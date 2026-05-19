@@ -139,7 +139,7 @@ BENCHMARK_CASES: Dict[str, BenchmarkCase] = {
         name="heavy_tailed_bimodal",
         description=(
             "Two Gaussians: N(-3, 0.8, 200) and N(3, 0.8, 200). "
-            "Symmetric, wide variance (heavy-tailed), well-separated means. "
+            "Symmetric, wide-variance components with well-separated means. "
             "Tests behavior when both components have large standard deviations."
         ),
         generator=lambda seed: _mixture(seed, [(-3, 0.8, 200), (3, 0.8, 200)]),
