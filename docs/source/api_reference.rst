@@ -1,54 +1,54 @@
 API Reference
 =============
 
-``pola`` package
+``critband`` package
 ----------------
 
-.. automodule:: pola
+.. automodule:: critband
    :members:
    :undoc-members:
    :show-inheritance:
    :no-index:
 
-``pola.bandwidth``
+``critband.bandwidth``
 ------------------
 
-.. automodule:: pola.bandwidth
+.. automodule:: critband.bandwidth
    :members:
    :undoc-members:
    :show-inheritance:
 
-``pola.io``
+``critband.io``
 -----------
 
-.. automodule:: pola.io
+.. automodule:: critband.io
    :members:
    :undoc-members:
    :show-inheritance:
 
-``pola.bootstrap``
+``critband.bootstrap``
 ------------------
 
-.. automodule:: pola.bootstrap
+.. automodule:: critband.bootstrap
    :members:
    :undoc-members:
    :show-inheritance:
 
-``pola.benchmark``
+``critband.benchmark``
 ------------------
 
-.. automodule:: pola.benchmark
+.. automodule:: critband.benchmark
    :members:
    :undoc-members:
    :show-inheritance:
 
-``pola.io`` submodules
+``critband.io`` submodules
 ----------------------
 
-.. automodule:: pola.io._base
+.. automodule:: critband.io._base
    :members:
    :undoc-members:
 
-.. automodule:: pola.io._common
+.. automodule:: critband.io._common
    :members:
    :undoc-members:

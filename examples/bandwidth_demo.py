@@ -1,7 +1,7 @@
 """
 Bandwidth Demo — Visualizing KDE, critical bandwidth, and component detection.
 
-Generates 3 matplotlib figures showing the core pola algorithms.
+Generates 3 matplotlib figures showing the core critband algorithms.
 
 Usage:
     uv sync --group viz
@@ -26,15 +26,15 @@ except ImportError:
 import numpy as np
 from scipy import stats as scipy_stats
 
-from pola import (
+from critband import (
     critical_bandwidth,
     detect_components,
     find_trough,
     gaussian_kde,
     silverman_bandwidth,
 )
-from pola.bandwidth import count_modes
-from pola.benchmark import BENCHMARK_CASES
+from critband.bandwidth import count_modes
+from critband.benchmark import BENCHMARK_CASES
 
 HERE = Path(__file__).parent
 

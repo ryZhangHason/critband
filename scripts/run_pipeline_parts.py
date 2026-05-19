@@ -12,7 +12,7 @@ TEX_DIR = f"{PROJECT}/02_projects/01_polarization_manuscript/05_writing/arxiv_v1
 def run_fast():
     """Run R5+R3+R9 sequentially in same process."""
     sys.path.insert(0, PROJECT)
-    import numpy as np, pola
+    import numpy as np, critband
     
     from overnight_pipeline import run_r5, run_r3, run_r9
     
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "part2":
         # Part 2: R4 only (slow, background)
         sys.path.insert(0, PROJECT)
-        import numpy as np, pola
+        import numpy as np, critband
         from overnight_pipeline import run_r4
         
         print("=" * 60)

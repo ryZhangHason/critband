@@ -15,7 +15,7 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import pola
+import critband
 
 # ============================================================================
 # Benchmark cases
@@ -57,7 +57,7 @@ def generate_data(case, seed):
 
 
 def run_single_case_seed(args):
-    """Run all pola functions for one case+seed combination.
+    """Run all critband functions for one case+seed combination.
     
     Returns dict of results. This function runs in a worker process.
     """
@@ -69,33 +69,33 @@ def run_single_case_seed(args):
     
     # R3: critical bandwidth (no bootstrap — fast)
     t0 = time.perf_counter()
-    h_crit, success = pola.critical_bandwidth(data, k=2, method="auto")
+    h_crit, success = critband.critical_bandwidth(data, k=2, method="auto")
     result["h_crit_t"] = time.perf_counter() - t0
     result["h_crit"] = h_crit
     result["success"] = success
     
     # silverman_bandwidth (fast)
     t0 = time.perf_counter()
-    h_silv = pola.silverman_bandwidth(data)
+    h_silv = critband.silverman_bandwidth(data)
     result["h_silv_t"] = time.perf_counter() - t0
     result["h_silv"] = h_silv
     
     # bimodality_strength (fast)
     t0 = time.perf_counter()
-    bs = pola.bimodality_strength(data)
+    bs = critband.bimodality_strength(data)
     result["bs_t"] = time.perf_counter() - t0
     result["bimodality_strength"] = bs
     
     # find_modes (fast)
     t0 = time.perf_counter()
-    modes_result = pola.find_modes(data, h=h_silv)
+    modes_result = critband.find_modes(data, h=h_silv)
     result["nm_t"] = time.perf_counter() - t0
     result["n_modes"] = modes_result.n_modes
     
     # detect_components (fast)
     t0 = time.perf_counter()
     try:
-        decomp = pola.detect_components(data)
+        decomp = critband.detect_components(data)
         result["dc_t"] = time.perf_counter() - t0
         result["comp_means"] = (decomp.component1.mean, decomp.component2.mean)
         result["comp_weights"] = (decomp.component1.weight, decomp.component2.weight)
@@ -108,7 +108,7 @@ def run_single_case_seed(args):
     
     # dip_test (fast)
     t0 = time.perf_counter()
-    dip_res = pola.dip_test(data)
+    dip_res = critband.dip_test(data)
     result["dip_t"] = time.perf_counter() - t0
     result["dip_stat"] = dip_res.statistic
     result["dip_p"] = dip_res.pvalue
@@ -119,7 +119,7 @@ def run_single_case_seed(args):
         t_times = []
         for _ in range(N_TIMING):
             t0 = time.perf_counter()
-            st = pola.silverman_test(data, k=2, n_resamples=99)
+            st = critband.silverman_test(data, k=2, n_resamples=99)
             t_times.append(time.perf_counter() - t0)
         result["st_t_mean"] = np.mean(t_times)
         result["st_t_std"] = np.std(t_times, ddof=1)
@@ -127,7 +127,7 @@ def run_single_case_seed(args):
     else:
         # For non-primary seeds, run once only
         t0 = time.perf_counter()
-        st = pola.silverman_test(data, k=2, n_resamples=99)
+        st = critband.silverman_test(data, k=2, n_resamples=99)
         result["st_t"] = time.perf_counter() - t0
         result["st_p"] = st.p_value
     
@@ -145,16 +145,16 @@ def run_timing_only(case):
     times = []
     for _ in range(N_TIMING):
         t0 = time.perf_counter()
-        pola.critical_bandwidth(data, k=2, method="auto")
+        critband.critical_bandwidth(data, k=2, method="auto")
         times.append(time.perf_counter() - t0)
     results["critical_bandwidth"] = (np.mean(times), np.std(times, ddof=1))
     
     # find_modes timing
-    h_silv = pola.silverman_bandwidth(data)
+    h_silv = critband.silverman_bandwidth(data)
     times = []
     for _ in range(N_TIMING):
         t0 = time.perf_counter()
-        pola.find_modes(data, h=h_silv)
+        critband.find_modes(data, h=h_silv)
         times.append(time.perf_counter() - t0)
     results["find_modes"] = (np.mean(times), np.std(times, ddof=1))
     
@@ -162,7 +162,7 @@ def run_timing_only(case):
     times = []
     for _ in range(N_TIMING):
         t0 = time.perf_counter()
-        pola.dip_test(data)
+        critband.dip_test(data)
         times.append(time.perf_counter() - t0)
     results["dip_test"] = (np.mean(times), np.std(times, ddof=1))
     

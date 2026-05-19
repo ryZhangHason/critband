@@ -8,8 +8,8 @@ import importlib.util
 import json
 import sys
 
-from pola.benchmark import get_all_benchmark_cases
-from pola.bandwidth import _compute_dip_statistic
+from critband.benchmark import get_all_benchmark_cases
+from critband.bandwidth import _compute_dip_statistic
 
 print(f"python={sys.version.split()[0]}")
 print(f"diptest_installed={importlib.util.find_spec('diptest') is not None}")
@@ -38,7 +38,7 @@ for name in ["well_separated_equal_var", "barely_separated", "trimodal"]:
     x = case.generator(42)
     # Cheap p-value spot check: use a small number of bootstrap samples
     # in our implementation and the external backend.
-    from pola import dip_test
+    from critband import dip_test
     ours = dip_test(x, n_boot=19, random_state=42)
     ext = ext_diptest(x, boot_pval=True, n_boot=999, seed=42)
     if isinstance(ext, tuple):

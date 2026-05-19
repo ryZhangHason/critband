@@ -1,10 +1,10 @@
-"""R2 benchmark: pola vs sklearn GaussianMixture BIC/AIC comparison."""
+"""R2 benchmark: critband vs sklearn GaussianMixture BIC/AIC comparison."""
 
 import numpy as np
 from sklearn.mixture import GaussianMixture
 
-# Import pola
-import pola
+# Import critband
+import critband
 
 # ============================================================================
 # Benchmark cases (matching the 12 from the paper)
@@ -128,32 +128,32 @@ def fit_gmm_k2(data):
 # ============================================================================
 np.random.seed(42)
 
-print("## pola vs sklearn GaussianMixture Comparison\n")
-print("| Case | pola h_crit | pola p-val | pola modes | GMM min BIC (k) | GMM min AIC (k) | GMM n=2 weights | GMM n=2 means | GMM n=2 stds |\n")
+print("## critband vs sklearn GaussianMixture Comparison\n")
+print("| Case | critband h_crit | critband p-val | critband modes | GMM min BIC (k) | GMM min AIC (k) | GMM n=2 weights | GMM n=2 means | GMM n=2 stds |\n")
 print("|------|------------|-----------|-----------|----------------|----------------|----------------|--------------|-------------|")
 
 for case in cases:
     data = generate_data(case, seed=42)
     n = len(data)
 
-    # pola: critical bandwidth
+    # critband: critical bandwidth
     try:
-        h_crit, success = pola.critical_bandwidth(data, k=2, method="auto")
+        h_crit, success = critband.critical_bandwidth(data, k=2, method="auto")
         h_str = f"{h_crit:.4f}{'' if success else '!'}"
     except Exception:
         h_str = "FAIL"
 
-    # pola: silverman test (quick: n_resamples=49 for speed estimation)
+    # critband: silverman test (quick: n_resamples=49 for speed estimation)
     try:
-        result = pola.silverman_test(data, k=2, n_resamples=29)
+        result = critband.silverman_test(data, k=2, n_resamples=29)
         p_str = f"{result.p_value:.4f}"
     except Exception as e:
         p_str = f"FAIL"
 
-    # pola: mode count
+    # critband: mode count
     try:
-        h_silv = pola.silverman_bandwidth(data)
-        modes_result = pola.find_modes(data, h=h_silv)
+        h_silv = critband.silverman_bandwidth(data)
+        modes_result = critband.find_modes(data, h=h_silv)
         n_modes = modes_result.n_modes
     except Exception as e:
         n_modes = -1
@@ -213,27 +213,27 @@ print(
     "**Key observations:**\n\n"
 
     "1. **Agreement is the norm.** For strongly bimodal cases (well-separated, unequal variance, "
-    "extreme separation, small sample), both pola (p < 0.001, h_crit >> h_silverman) and GMM (BIC/AIC "
-    "select k=2) agree on bimodality. This confirms that pola's critical bandwidth test is consistent "
+    "extreme separation, small sample), both critband (p < 0.001, h_crit >> h_silverman) and GMM (BIC/AIC "
+    "select k=2) agree on bimodality. This confirms that critband's critical bandwidth test is consistent "
     "with parametric model selection.\n\n"
 
     "2. **Disagreement reveals complementarity.** The barely separated and near unimodal cases show "
-    "the most informative divergence: pola returns a moderate h_crit with p > 0.05 (failing to reject "
+    "the most informative divergence: critband returns a moderate h_crit with p > 0.05 (failing to reject "
     "unimodality), while GMM BIC may select k=2. This is not a contradiction but reflects a "
-    "fundamental difference: pola tests whether the data are *significantly* non-unimodal (frequentist "
+    "fundamental difference: critband tests whether the data are *significantly* non-unimodal (frequentist "
     "inference), while BIC selects the model with the best information-theoretic fit (which may "
     "overfit for borderline separation).\n\n"
 
-    "3. **Continuous vs discrete.** pola's h_crit provides a continuous separation metric that "
+    "3. **Continuous vs discrete.** critband's h_crit provides a continuous separation metric that "
     "quantifies *how* bimodal a distribution is, whereas GMM BIC/AIC only answer 'how many "
     "components?' in a discrete sense. The near-unimodal case (h_crit = 0.42, just above the "
-    "Silverman bandwidth) is a good example: pola tells you 'this is weakly bimodal, close to "
+    "Silverman bandwidth) is a good example: critband tells you 'this is weakly bimodal, close to "
     "the unimodal boundary,' while BIC says '2 components.' Both are correct but convey different "
     "information.\n\n"
 
     "4. **GMM limitations.** GMM assumes Gaussian components and can produce unreliable BIC values "
     "when the true distribution is not well-approximated by a Gaussian mixture (e.g., heavy-tailed "
-    "or asymmetric data). pola's nonparametric approach makes no such assumption, making it more "
+    "or asymmetric data). critband's nonparametric approach makes no such assumption, making it more "
     "robust for exploratory analysis.\n\n"
 
     "5. **Pola's advantage over GMM** for multimodality testing specifically: (a) no distributional "
@@ -242,8 +242,8 @@ print(
     "reliably on small samples where GMM fitting can be unstable. GMM's advantage: parametric "
     "component estimation is more statistically efficient when the Gaussian assumption holds.\n\n"
 
-    "**Bottom line:** pola and sklearn GMM are complementary tools. For purely testing *whether* "
-    "a distribution is bimodal, pola's nonparametric approach is safer (fewer assumptions). For "
+    "**Bottom line:** critband and sklearn GMM are complementary tools. For purely testing *whether* "
+    "a distribution is bimodal, critband's nonparametric approach is safer (fewer assumptions). For "
     "*characterizing* the components once bimodality is established, GMM provides more efficient "
     "parameter estimation."
 )

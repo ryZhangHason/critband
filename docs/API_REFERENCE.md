@@ -1,6 +1,6 @@
-# pola API Reference
+# critband API Reference
 
-## Module: `pola` — Core Algorithm
+## Module: `critband` — Core Algorithm
 
 ### `silverman_bandwidth(x)`
 
@@ -17,7 +17,7 @@ def silverman_bandwidth(x: np.ndarray) -> float
 **Example:**
 ```python
 import numpy as np
-from pola import silverman_bandwidth
+from critband import silverman_bandwidth
 
 x = np.random.normal(0, 1, 1000)
 h = silverman_bandwidth(x)  # ≈ 0.26
@@ -106,7 +106,7 @@ def critical_bandwidth(
 
 **Example:**
 ```python
-from pola import critical_bandwidth
+from critband import critical_bandwidth
 import numpy as np
 
 x = np.concatenate([np.random.normal(-2, 0.5, 200),
@@ -208,7 +208,7 @@ class BimodalDecomposition:
 
 ---
 
-## Module: `pola.io` — Data Loading
+## Module: `critband.io` — Data Loading
 
 ### `read_data(path, sheet, column, return_all)`
 
@@ -235,7 +235,7 @@ def read_data(
 
 **Example:**
 ```python
-from pola.io import read_data
+from critband.io import read_data
 
 # Auto-detect from extension
 x = read_data("measurements.csv")
@@ -268,7 +268,7 @@ def read_buffer(
 
 **Example (Flask):**
 ```python
-from pola.io import read_buffer
+from critband.io import read_buffer
 import io
 
 uploaded = request.files["data"]
@@ -309,11 +309,11 @@ Inherits from `ValueError`. Raised by `read_data` and `read_buffer` for:
 | Word (tables) | `.docx` | `python-docx` | Yes |
 | PDF (tables) | `.pdf` | `pdfplumber` | Yes |
 
-All dependencies are declared in `pyproject.toml` and installed automatically with `pip install pola`.
+All dependencies are declared in `pyproject.toml` and installed automatically with `pip install critband`.
 
 ---
 
-## Module: `pola.bootstrap` — Bootstrap Inference
+## Module: `critband.bootstrap` — Bootstrap Inference
 
 ### `bootstrap_critical_bandwidth(x, n_resamples, alpha, random_state, **kwargs)`
 
@@ -340,7 +340,7 @@ def bootstrap_critical_bandwidth(
 
 **Example:**
 ```python
-from pola import bootstrap_critical_bandwidth
+from critband import bootstrap_critical_bandwidth
 import numpy as np
 
 x = np.concatenate([np.random.normal(-2, 0.5, 200),

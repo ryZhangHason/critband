@@ -1,5 +1,5 @@
 """
-Tests for pola.io input adapters.
+Tests for critband.io input adapters.
 
 Tests per-format adapters (CSV, TXT, JSON, XLSX, XLS, DOCX, HTML, PDF),
 shared utilities, and web-ready read_buffer.
@@ -11,8 +11,8 @@ import json
 import numpy as np
 import pytest
 
-from pola.io import DataReadError, read_buffer, read_data
-from pola.io._common import filter_numerical_columns, is_numerical_column, try_parse_float
+from critband.io import DataReadError, read_buffer, read_data
+from critband.io._common import filter_numerical_columns, is_numerical_column, try_parse_float
 
 # ============================================================================
 # Shared utilities

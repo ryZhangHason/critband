@@ -6,13 +6,13 @@ Installation
 
 .. code-block:: bash
 
-   pip install pola
+   pip install critband
 
 Or using uv:
 
 .. code-block:: bash
 
-   uv add pola
+   uv add critband
 
 
 Basic Usage
@@ -23,7 +23,7 @@ The simplest use case: test whether your data is bimodal.
 .. code-block:: python
 
    import numpy as np
-   from pola import critical_bandwidth
+   from critband import critical_bandwidth
 
    # Bimodal data
    x = np.concatenate([
@@ -39,12 +39,12 @@ The simplest use case: test whether your data is bimodal.
 Reading Data from Files
 -----------------------
 
-pola can read numerical data from 9 file formats without needing to learn
+critband can read numerical data from 9 file formats without needing to learn
 separate tools for each format.
 
 .. code-block:: python
 
-   from pola.io import read_data
+   from critband.io import read_data
 
    # Auto-detect — just point at any supported file
    x = read_data("measurements.csv")
@@ -70,7 +70,7 @@ Full Pipeline Example
 .. code-block:: python
 
    import numpy as np
-   from pola import (
+   from critband import (
        critical_bandwidth,
        find_modes,
        bimodality_strength,

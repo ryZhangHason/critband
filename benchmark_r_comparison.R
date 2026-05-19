@@ -1,5 +1,5 @@
-# pola vs R Benchmark Script
-# Compares pola critical_bandwidth, dip_test, find_modes with R equivalents
+# critband vs R Benchmark Script
+# Compares critband critical_bandwidth, dip_test, find_modes with R equivalents
 
 library(multimode)
 library(diptest)
@@ -7,7 +7,7 @@ library(ks)
 
 set.seed(42)
 
-# ---- Benchmark data generators (matches pola/benchmark.py) ----
+# ---- Benchmark data generators (matches critband/benchmark.py) ----
 
 generate_mixture <- function(components, seed) {
   set.seed(seed)
@@ -110,7 +110,7 @@ run_diptest <- function(x) {
 
 # ---- Helper: nmodes estimation ----
 run_nmodes <- function(x) {
-  # nmodes now requires bw; use Silverman's rule (nrd0) — matches pola's default
+  # nmodes now requires bw; use Silverman's rule (nrd0) — matches critband's default
   bw <- bw.nrd0(x)
   t <- system.time({
     result <- tryCatch(nmodes(x, bw=bw), error=function(e) NA_integer_)

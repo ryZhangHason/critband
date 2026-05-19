@@ -8,7 +8,7 @@ import time
 import numpy as np
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import pola
+import critband
 
 CASES = [
     {"name": "Well-separated",       "n": 400, "components": [(0.5, -2.0, 0.3),  (0.5, 2.0, 0.3)]},
@@ -48,12 +48,12 @@ print("=" * 70)
 timing_cases = [CASES[0], CASES[2], CASES[10]]
 for name_prefix, case in [("large", CASES[0]), ("small", CASES[2]), ("tiny", CASES[10])]:
     data = gen(case, case.get("seed_offset", 42))
-    h_silv = pola.silverman_bandwidth(data)
+    h_silv = critband.silverman_bandwidth(data)
     
     for func_name, func, args in [
-        ("critical_bandwidth", pola.critical_bandwidth, ((data,), {"method": "auto"})),
-        ("find_modes", pola.find_modes, ((data,), {"h": h_silv})),
-        ("dip_test", pola.dip_test, ((data,), {})),
+        ("critical_bandwidth", critband.critical_bandwidth, ((data,), {"method": "auto"})),
+        ("find_modes", critband.find_modes, ((data,), {"h": h_silv})),
+        ("dip_test", critband.dip_test, ((data,), {})),
     ]:
         times = []
         for _ in range(N_TIMING):
@@ -80,16 +80,16 @@ for case in CASES:
         data = gen(case, 100 + s)
         
         # critical_bandwidth
-        h_crit, _ = pola.critical_bandwidth(data, k=2, method="auto")
+        h_crit, _ = critband.critical_bandwidth(data, k=2, method="auto")
         h_vals.append(h_crit)
         
         # find_modes
-        h_silv = pola.silverman_bandwidth(data)
-        mr = pola.find_modes(data, h=h_silv)
+        h_silv = critband.silverman_bandwidth(data)
+        mr = critband.find_modes(data, h=h_silv)
         n_modes_list.append(mr.n_modes)
         
         # bimodality_strength
-        bs = pola.bimodality_strength(data)
+        bs = critband.bimodality_strength(data)
         bs_list.append(bs)
     
     h_mean = np.mean(h_vals)

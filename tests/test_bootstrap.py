@@ -5,8 +5,8 @@ Tests for bootstrap confidence interval estimation.
 import numpy as np
 import pytest
 
-from pola import BootstrapResult, ModeTestResult, bootstrap_critical_bandwidth, modetest, silverman_test
-from pola.benchmark import BENCHMARK_CASES
+from critband import BootstrapResult, ModeTestResult, bootstrap_critical_bandwidth, modetest, silverman_test
+from critband.benchmark import BENCHMARK_CASES
 
 
 class TestBootstrapResultDataclass:
@@ -47,7 +47,7 @@ class TestBootstrapCriticalBandwidth:
 
     def test_h_crit_on_original_matches(self):
         """h_crit from bootstrap matches direct critical_bandwidth call."""
-        from pola import critical_bandwidth
+        from critband import critical_bandwidth
 
         np.random.seed(42)
         x = np.concatenate([np.random.normal(-2, 0.3, 200), np.random.normal(2, 0.3, 200)])

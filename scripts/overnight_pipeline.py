@@ -19,7 +19,7 @@ import sys, os, subprocess, json, textwrap
 from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import pola
+import critband
 
 PROJECT_ROOT = "/Users/qadz/Downloads/Polarization-CBW"
 TEX_DIR = f"{PROJECT_ROOT}/02_projects/01_polarization_manuscript/05_writing/arxiv_v1"
@@ -83,11 +83,11 @@ def run_r5():
     
     for ci, case in enumerate(CASES[:3]):  # first 3 cases
         data = gen(case, 42)
-        h_silv = pola.silverman_bandwidth(data)
+        h_silv = critband.silverman_bandwidth(data)
         
         for func_name, func, args in [
-            ("critical_bandwidth", pola.critical_bandwidth, ((data,), {"method": "auto"})),
-            ("find_modes", pola.find_modes, ((data,), {"h": h_silv})),
+            ("critical_bandwidth", critband.critical_bandwidth, ((data,), {"method": "auto"})),
+            ("find_modes", critband.find_modes, ((data,), {"h": h_silv})),
             # dip_test excluded: O(n²) Hartigan's dip, takes ~75 min per call on n=400-600 data
         ]:
             times = []
@@ -126,12 +126,12 @@ def run_r3():
         h_vals, n_modes_list, bs_list = [], [], []
         for si in range(N_R3_SEEDS):
             data = gen(case, 100 + si)
-            h_crit, _ = pola.critical_bandwidth(data, k=2, method="auto")
+            h_crit, _ = critband.critical_bandwidth(data, k=2, method="auto")
             h_vals.append(h_crit)
-            h_silv = pola.silverman_bandwidth(data)
-            mr = pola.find_modes(data, h=h_silv)
+            h_silv = critband.silverman_bandwidth(data)
+            mr = critband.find_modes(data, h=h_silv)
             n_modes_list.append(mr.n_modes)
-            bs = pola.bimodality_strength(data)
+            bs = critband.bimodality_strength(data)
             bs_list.append(bs.strength_score)
             done += 1
         
@@ -182,13 +182,13 @@ def run_r9():
         for si in range(N_R9_SEEDS):
             data = gen(case, 2000 + si)  # different seed range
             
-            auto_h, _ = pola.critical_bandwidth(data, k=2, method="auto")
+            auto_h, _ = critband.critical_bandwidth(data, k=2, method="auto")
             auto_h_list.append(auto_h)
             
-            binary_h, _ = pola.critical_bandwidth(data, k=2, method="binary")
+            binary_h, _ = critband.critical_bandwidth(data, k=2, method="binary")
             binary_h_list.append(binary_h)
             
-            brent_h, _ = pola.critical_bandwidth(data, k=2, method="brent")
+            brent_h, _ = critband.critical_bandwidth(data, k=2, method="brent")
             brent_h_list.append(brent_h)
             
             # Detect fallback: auto ≈ binary (not auto ≈ brent)
@@ -231,11 +231,11 @@ def run_r4():
     t0 = time.time()
     
     # Ground truth from large sample
-    h_gt, _ = pola.critical_bandwidth(gen(case, 42), k=2, method="auto")
+    h_gt, _ = critband.critical_bandwidth(gen(case, 42), k=2, method="auto")
     # Large-n ground truth — use existing data
     rng = np.random.RandomState(42)
     big_data = np.concatenate([rng.normal(m, s, 10000) for _, m, s in case["components"]])
-    h_gt, _ = pola.critical_bandwidth(big_data, k=2, method="auto")
+    h_gt, _ = critband.critical_bandwidth(big_data, k=2, method="auto")
     print(f"  Ground truth h_crit (n=20000): {h_gt:.4f}")
     
     covered = 0
@@ -244,7 +244,7 @@ def run_r4():
     for mc_i in range(N_MC):
         data = gen(case, 10000 + mc_i)
         try:
-            h, success, cl, ch, se = pola.critical_bandwidth(
+            h, success, cl, ch, se = critband.critical_bandwidth(
                 data, k=2, return_ci=True, ci_resamples=N_BOOT, method="auto"
             )
             if success and not np.isnan(cl):
@@ -318,7 +318,7 @@ def compile_pdf():
 # ========================================================================== #
 def main():
     print("=" * 60)
-    print("pola overnight pipeline: R5 → R3 → R9 → R4")
+    print("critband overnight pipeline: R5 → R3 → R9 → R4")
     print("=" * 60)
     print(f"Start: {time.strftime('%Y-%m-%d %H:%M')}")
     print(f"Platform: arm64, serial execution")

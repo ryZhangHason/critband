@@ -151,7 +151,7 @@ def compile_paper():
 
 def main():
     print("=" * 60)
-    print("pola revision pipeline: R9 → R10")
+    print("critband revision pipeline: R9 → R10")
     print("=" * 60)
     
     # Step 0: Check prerequisites

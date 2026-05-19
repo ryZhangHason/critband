@@ -1,6 +1,6 @@
-# Contributing to pola
+# Contributing to critband
 
-Thank you for your interest in contributing to **pola** — the Python package for critical bandwidth analysis of bimodal distributions.
+Thank you for your interest in contributing to **critband** — the Python package for critical bandwidth analysis of bimodal distributions.
 
 ## How to Report Issues
 

@@ -1,5 +1,5 @@
 """
-Performance Benchmark — Measure execution time of core pola functions.
+Performance Benchmark - Measure execution time of core critband functions.
 
 Measures 6 core functions at 3 data sizes (100, 1000, 10000 points)
 using time.perf_counter with multiple runs and median aggregation.
@@ -71,14 +71,14 @@ def run_benchmark(
         Number of timing runs for slow functions (critical_bandwidth etc.).
     """
     # Lazy import to avoid load cost in timing
-    from pola import (
+    from critband import (
         critical_bandwidth,
         detect_components,
         find_trough,
         gaussian_kde,
         silverman_bandwidth,
     )
-    from pola.bandwidth import count_modes
+    from critband.bandwidth import count_modes
 
     data = _generate_data(sizes)
     results: Dict[str, Dict[int, float]] = {}
@@ -151,7 +151,7 @@ def print_table(results: Dict[str, Dict[int, float]], sizes: List[int]) -> None:
     today = date.today().isoformat()
 
     print()
-    print("=== pola Performance Benchmark ===")
+    print("=== critband Performance Benchmark ===")
     print(f"Date: {today}")
     size_str = ", ".join(f"n={s}" for s in sizes)
     print(f"Data size: {size_str}")
@@ -198,7 +198,7 @@ def save_csv(results: Dict[str, Dict[int, float]], sizes: List[int], path: str) 
 
 
 def parse_args(argv: List[str] = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Benchmark performance of pola core functions.")
+    parser = argparse.ArgumentParser(description="Benchmark performance of critband core functions.")
     parser.add_argument(
         "--runs",
         type=int,

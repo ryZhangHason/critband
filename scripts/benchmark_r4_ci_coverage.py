@@ -15,7 +15,7 @@ import numpy as np
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import pola
+import critband
 
 # Representative cases for CI coverage
 CASES = [
@@ -50,7 +50,7 @@ def estimate_ground_truth(case, seed=42):
         n_i = int(round(weight * N_GT))
         data.append(rng.normal(mean, std, n_i))
     data = np.concatenate(data)[:N_GT]
-    h_gt, _ = pola.critical_bandwidth(data, k=2, method="auto")
+    h_gt, _ = critband.critical_bandwidth(data, k=2, method="auto")
     return h_gt
 
 
@@ -76,7 +76,7 @@ def one_mc_iteration(args):
     
     # Compute h_crit with bootstrap CI
     try:
-        h_crit, success, ci_low, ci_high, se = pola.critical_bandwidth(
+        h_crit, success, ci_low, ci_high, se = critband.critical_bandwidth(
             data, k=2, return_ci=True, ci_resamples=N_BOOT, method="auto"
         )
         covered = (ci_low <= h_gt <= ci_high) if success else False

@@ -1,8 +1,8 @@
-"""Fast pola benchmark — no excess_mass (too slow), minimal bootstrap."""
+"""Fast critband benchmark — no excess_mass (too slow), minimal bootstrap."""
 import time
 import numpy as np
-from pola import critical_bandwidth, dip_test, find_modes, bimodality_strength, silverman_bandwidth
-from pola.benchmark import BENCHMARK_CASES
+from critband import critical_bandwidth, dip_test, find_modes, bimodality_strength, silverman_bandwidth
+from critband.benchmark import BENCHMARK_CASES
 
 print("case,desc,n,h_ref,h_crit,time_crit,ok,dip_stat,dip_time,n_modes,strength,score")
 for name, case in BENCHMARK_CASES.items():

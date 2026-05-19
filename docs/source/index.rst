@@ -1,4 +1,4 @@
-pola documentation
+critband documentation
 ==================
 
 .. toctree::
@@ -11,10 +11,10 @@ pola documentation
    development
 
 
-What is pola?
+What is critband?
 -------------
 
-**pola** is a Python package for detecting and analyzing bimodal (and multimodal)
+**critband** is a Python package for detecting and analyzing bimodal (and multimodal)
 distributions using the **critical bandwidth** method in kernel density estimation
 (KDE). The critical bandwidth :math:`h_{\text{crit}}` is the smallest bandwidth
 at which the KDE transitions from :math:`k` modes to :math:`k-1` modes — a
@@ -32,17 +32,17 @@ Key features:
 - **Modality tests** — :func:`dip_test` (Hartigan & Hartigan 1985),
   :func:`silverman_test` (Silverman 1981), :func:`excess_mass`
   (Müller & Sawitzki 1991)
-- **Multi-format I/O** — :mod:`pola.io` reads numerical data from 9 file formats
+- **Multi-format I/O** — :mod:`critband.io` reads numerical data from 9 file formats
   (CSV, TSV, JSON, Markdown, HTML, XLSX, XLS, DOCX, PDF) through a unified API
 - **Web-ready** — runs in-browser via Pyodide (WebAssembly) at
-  https://qhwangantoneva.github.io/pola/
+  https://qhwangantoneva.github.io/critband/
 
 Quick start:
 
 .. code-block:: python
 
    import numpy as np
-   from pola import critical_bandwidth
+   from critband import critical_bandwidth
 
    x = np.concatenate([np.random.normal(-2, 0.5, 200),
                         np.random.normal( 2, 0.5, 200)])

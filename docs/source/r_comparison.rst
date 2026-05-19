@@ -1,7 +1,7 @@
 R Package Comparison
 =====================
 
-pola has been validated against equivalent R implementations across 12
+critband has been validated against equivalent R implementations across 12
 benchmark cases (seed=42, unique per case). The comparison covers three
 R packages: ``multimode`` (v2.10), ``diptest`` (v0.77), and ``ks`` (v1.14).
 
@@ -9,7 +9,7 @@ R packages: ``multimode`` (v2.10), ``diptest`` (v0.77), and ``ks`` (v1.14).
 Critical Bandwidth Agreement
 -----------------------------
 
-| Case | :math:`n` | pola :math:`h_{\text{crit}}` | R ``modetest`` :math:`p` | R ``dip.test`` :math:`p` |
+| Case | :math:`n` | critband :math:`h_{\text{crit}}` | R ``modetest`` :math:`p` | R ``dip.test`` :math:`p` |
 |------|:----------:|:----------------------------:|:------------------------:|:-------------------------:|
 | Well-separated | 400 | 1.8650 | 0.000 | 0.000 |
 | Moderate separation | 500 | 1.0964 | 0.000 | 0.000 |
@@ -24,7 +24,7 @@ Critical Bandwidth Agreement
 | Small sample bimodal | 60 | 1.8608 | 0.000 | 0.000 |
 | Overlapping variances | 500 | 0.4598 | 0.045 | 0.322 |
 
-pola's ``critical_bandwidth()`` agrees with R's ``modetest`` — strongly
+critband's ``critical_bandwidth()`` agrees with R's ``modetest`` — strongly
 bimodal cases produce significant :math:`p`-values in both environments,
 and boundary cases (barely separated, near unimodal, overlapping variances)
 return consistent non-significant results.
@@ -33,13 +33,13 @@ return consistent non-significant results.
 Performance Comparison
 ----------------------
 
-| Operation | pola | R | Speedup |
+| Operation | critband | R | Speedup |
 |-----------|:----:|:--:|:-------:|
 | ``critical_bandwidth()`` | 0.04–0.79s | 0.82–1.58s (``modetest``) | 3–10× faster |
 | ``dip_test()`` / ``dip.test()`` | ~0.002s | 0.001–0.008s | Tie |
 | ``find_modes()`` / ``nmodes()`` | <0.01s | 0.03–0.05s | Tie |
 
-pola's performance advantage on critical bandwidth computation comes from
+critband's performance advantage on critical bandwidth computation comes from
 a pure-Python numerical stack (NumPy/SciPy) with adaptive grid sizing and
 no R process dispatch overhead.
 
@@ -47,7 +47,7 @@ no R process dispatch overhead.
 Feature Comparison
 ------------------
 
-| Feature | pola | multimode | diptest |
+| Feature | critband | multimode | diptest |
 |---------|:----:|:---------:|:-------:|
 | Critical bandwidth (:math:`k \ge 2`) | ✅ | ✅ (:math:`k=2`) | ❌ |
 | k-mode detection | ✅ (any :math:`k`) | ❌ | ❌ |
@@ -67,7 +67,7 @@ Reproduction
 
 .. code-block:: bash
 
-   # pola benchmark
+   # critband benchmark
    uv run python benchmark_pola_comparison.py
 
    # R benchmark (requires R + multimode + diptest)

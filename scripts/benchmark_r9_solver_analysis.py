@@ -12,7 +12,7 @@ import numpy as np
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import pola
+import critband
 
 # Benchmark cases (same 12 as paper)
 CASES = [
@@ -59,7 +59,7 @@ def check_r_h_CONTINUITY(data, h_range=None):
     - r_values: list of (h, r) pairs
     """
     if h_range is None:
-        h_silv = pola.silverman_bandwidth(data)
+        h_silv = critband.silverman_bandwidth(data)
         h_range = np.linspace(h_silv * 0.1, h_silv * 5.0, 200)
     
     prev_peak_order = None
@@ -69,7 +69,7 @@ def check_r_h_CONTINUITY(data, h_range=None):
     for h in h_range:
         # Evaluate KDE at grid points
         grid = np.linspace(data.min() - 3*h, data.max() + 3*h, 500)
-        kde = pola.gaussian_kde(data, grid, h)
+        kde = critband.gaussian_kde(data, grid, h)
         
         # Find peaks and valley
         from scipy.signal import find_peaks
@@ -122,7 +122,7 @@ def run_single_case_seed_R9(args):
     for method in ["auto", "binary", "brent"]:
         try:
             t0 = time.perf_counter()
-            h_crit, success = pola.critical_bandwidth(
+            h_crit, success = critband.critical_bandwidth(
                 data, k=2, method=method, tol=1e-6, max_iter=100
             )
             elapsed = time.perf_counter() - t0
@@ -155,8 +155,8 @@ def run_single_case_seed_R9(args):
     # 3. Check r(h) continuity (sample at 100 points for speed)
     try:
         cont_info = check_r_h_CONTINUITY(data, h_range=np.linspace(
-            result.get("auto_h", pola.silverman_bandwidth(data)) * 0.5,
-            result.get("auto_h", pola.silverman_bandwidth(data)) * 3.0,
+            result.get("auto_h", critband.silverman_bandwidth(data)) * 0.5,
+            result.get("auto_h", critband.silverman_bandwidth(data)) * 3.0,
             100
         ))
         result["n_discontinuities"] = cont_info["n_discontinuities"]

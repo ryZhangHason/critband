@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from scipy import integrate
 
-from pola import (
+from critband import (
     BimodalityStrength,
     ExcessMassResult,
     bimodality_strength,
@@ -19,8 +19,8 @@ from pola import (
     gaussian_kde,
     silverman_bandwidth,
 )
-from pola.bandwidth import _trough_ratio, count_modes
-from pola.benchmark import BENCHMARK_CASES
+from critband.bandwidth import _trough_ratio, count_modes
+from critband.benchmark import BENCHMARK_CASES
 
 
 class TestSilvermanBandwidth:
@@ -234,7 +234,7 @@ class TestGaussianKdeFFT:
 
     def test_fft_benchmark_cases(self):
         """FFT should produce valid KDE on benchmark data (binning error on n~200 data)."""
-        from pola.benchmark import BENCHMARK_CASES
+        from critband.benchmark import BENCHMARK_CASES
 
         for name, case in BENCHMARK_CASES.items():
             x = case.generator(42)
@@ -509,7 +509,7 @@ class TestBrentSolver:
         x = case.generator(42)
         h_crit, ok = critical_bandwidth(x, method="brent", tol=1e-8, max_iter=100)
         assert ok, f"{case_name}: brent did not converge"
-        from pola.bandwidth import count_modes
+        from critband.bandwidth import count_modes
 
         assert count_modes(x, h_crit) == 1, (
             f"{case_name}: h_crit={h_crit:.6f} has {count_modes(x, h_crit)} modes"
@@ -517,7 +517,7 @@ class TestBrentSolver:
 
     def test_brent_objective_sign_change(self):
         """_brent_objective returns positive at h_min, negative at h_max."""
-        from pola.bandwidth import _brent_objective, silverman_bandwidth
+        from critband.bandwidth import _brent_objective, silverman_bandwidth
 
         x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
         h_min = silverman_bandwidth(x) / 20.0
@@ -529,7 +529,7 @@ class TestBrentSolver:
 
     def test_brent_objective_zero_h(self):
         """h <= 0 returns positive (bimodal forcing)."""
-        from pola.bandwidth import _brent_objective
+        from critband.bandwidth import _brent_objective
 
         x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
         assert _brent_objective(0.0, x) > 0
@@ -537,7 +537,7 @@ class TestBrentSolver:
 
     def test_brent_objective_unimodal_data(self):
         """Unimodal data returns negative at all bandwidths."""
-        from pola.bandwidth import _brent_objective, silverman_bandwidth
+        from critband.bandwidth import _brent_objective, silverman_bandwidth
 
         rng = np.random.default_rng(42)
         x = rng.normal(0, 1, 500)
@@ -783,7 +783,7 @@ class TestKdeGridPoints:
 
     def test_small_h_fine_grid(self):
         """Small h relative to range should produce fine grid."""
-        from pola.bandwidth import _kde_grid_points
+        from critband.bandwidth import _kde_grid_points
 
         result = _kde_grid_points(100, h=0.01, data_range=10)
         # base=200, ratio=250, scale=3.0, points=600
@@ -791,7 +791,7 @@ class TestKdeGridPoints:
 
     def test_large_h_coarse_grid(self):
         """Large h relative to range should produce coarse grid (near min_grid)."""
-        from pola.bandwidth import _kde_grid_points
+        from critband.bandwidth import _kde_grid_points
 
         result = _kde_grid_points(100, h=10.0, data_range=10)
         # base=200, ratio=0.25, scale=0.5, points=100 → clamped to 200
@@ -799,7 +799,7 @@ class TestKdeGridPoints:
 
     def test_no_h_backward_compatible(self):
         """Without h param, should return original n//10 clamped."""
-        from pola.bandwidth import _kde_grid_points
+        from critband.bandwidth import _kde_grid_points
 
         assert _kde_grid_points(100) == 200  # min_grid
         assert _kde_grid_points(5000) == 500  # 5000//10 = 500
@@ -808,7 +808,7 @@ class TestKdeGridPoints:
 
     def test_large_h_coarse_big_n(self):
         """Large h with large n should reduce grid below size-derived value."""
-        from pola.bandwidth import _kde_grid_points
+        from critband.bandwidth import _kde_grid_points
 
         result = _kde_grid_points(5000, h=10.0, data_range=10)
         # base=500, ratio=0.25, scale=0.5, points=250
@@ -816,7 +816,7 @@ class TestKdeGridPoints:
 
     def test_small_h_fine_big_n(self):
         """Small h with big n should hit max_grid."""
-        from pola.bandwidth import _kde_grid_points
+        from critband.bandwidth import _kde_grid_points
 
         result = _kde_grid_points(5000, h=0.01, data_range=10)
         # base=500, ratio=250, scale=3.0, points=1500 → auto_max=2500, clamped to 1500
@@ -824,7 +824,7 @@ class TestKdeGridPoints:
 
     def test_max_grid_auto_scale(self):
         """Auto max_grid scales with n."""
-        from pola.bandwidth import _kde_grid_points
+        from critband.bandwidth import _kde_grid_points
 
         # n=1000: max_grid should be 800
         assert _kde_grid_points(1000) <= 800
@@ -838,14 +838,14 @@ class TestKdeGridPoints:
 
     def test_max_grid_explicit_override(self):
         """Explicit max_grid overrides auto."""
-        from pola.bandwidth import _kde_grid_points
+        from critband.bandwidth import _kde_grid_points
 
         result = _kde_grid_points(10000, max_grid=1000)
         assert result <= 1000
 
     def test_auto_max_clamping(self):
         """Auto max_grid should not exceed limits."""
-        from pola.bandwidth import _kde_grid_points
+        from critband.bandwidth import _kde_grid_points
 
         # n=1: min_grid=200
         result = _kde_grid_points(1)
@@ -902,7 +902,7 @@ class TestCriticalBandwidthCI:
 
     def test_ci_result_provenance(self):
         """return_ci_result=True returns the bootstrap result object."""
-        from pola import BootstrapResult
+        from critband import BootstrapResult
 
         x = BENCHMARK_CASES["well_separated_equal_var"].generator(42)
         h_crit, ok, boot = critical_bandwidth(
@@ -945,7 +945,7 @@ class TestDipTest:
         rng = np.random.default_rng(42)
         x_unif = rng.uniform(0, 1, 100)
         x_bimod = np.concatenate([rng.normal(-2, 0.3, 100), rng.normal(2, 0.3, 100)])
-        from pola.bandwidth import _compute_dip_statistic
+        from critband.bandwidth import _compute_dip_statistic
 
         dip_unif = _compute_dip_statistic(x_unif)
         dip_bimod = _compute_dip_statistic(x_bimod)
@@ -966,7 +966,7 @@ class TestDipTest:
 
     def test_dip_test_large_n_caps_bootstrap_budget(self, monkeypatch):
         """Large samples should use the bounded exploratory bootstrap fallback."""
-        import pola.bandwidth as bandwidth_mod
+        import critband.bandwidth as bandwidth_mod
 
         monkeypatch.setattr(bandwidth_mod, "DIP_TEST_LARGE_N_THRESHOLD", 5)
         monkeypatch.setattr(bandwidth_mod, "DIP_TEST_LARGE_N_BOOTSTRAP_CAP", 9)
@@ -983,7 +983,7 @@ class TestDipTest:
 
     def test_dip_statistic_tiny(self):
         """Very small samples."""
-        from pola.bandwidth import _compute_dip_statistic
+        from critband.bandwidth import _compute_dip_statistic
 
         x = np.array([1.0, 2.0, 3.0])
         d = _compute_dip_statistic(x)
@@ -991,7 +991,7 @@ class TestDipTest:
 
     def test_dip_statistic_range(self):
         """Dip statistic should be between 0 and 0.5."""
-        from pola.bandwidth import _compute_dip_statistic
+        from critband.bandwidth import _compute_dip_statistic
 
         rng = np.random.default_rng(42)
         for _ in range(10):
