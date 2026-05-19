@@ -15,7 +15,7 @@ import sys
 import os
 import time
 
-PROJECT_ROOT = "/Users/qadz/Downloads/Polarization-CBW"
+PROJECT_ROOT = "critband"
 TEX_DIR = f"{PROJECT_ROOT}/02_projects/01_polarization_manuscript/05_writing/arxiv_v1"
 TEX_PATH = f"{TEX_DIR}/pola_arxiv.tex"
 

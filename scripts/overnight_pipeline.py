@@ -21,7 +21,7 @@ from collections import defaultdict
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import critband
 
-PROJECT_ROOT = "/Users/qadz/Downloads/Polarization-CBW"
+PROJECT_ROOT = "critband"
 TEX_DIR = f"{PROJECT_ROOT}/02_projects/01_polarization_manuscript/05_writing/arxiv_v1"
 TEX_PATH = f"{TEX_DIR}/pola_arxiv.tex"
 RESULTS_FILE = f"{TEX_DIR}/benchmark_results.json"

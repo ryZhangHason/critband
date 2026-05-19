@@ -4,7 +4,7 @@ Thank you for your interest in contributing to **critband** — the Python packa
 
 ## How to Report Issues
 
-If you encounter a bug, have a feature request, or have a question about usage, please open a [GitHub Issue](https://github.com/ryZhangHason/Polarization-CBW/issues). When reporting a bug, include:
+If you encounter a bug, have a feature request, or have a question about usage, please open a [GitHub Issue](https://github.com/ryZhangHason/critband/issues). When reporting a bug, include:
 
 - A minimal reproducible example (code + data)
 - The expected behavior and the actual behavior
@@ -29,8 +29,8 @@ This project uses [uv](https://docs.astral.sh/uv/) for package management. To se
 
 ```bash
 # Clone the repository
-git clone https://github.com/ryZhangHason/Polarization-CBW.git
-cd Polarization-CBW
+git clone https://github.com/ryZhangHason/critband.git
+cd critband
 
 # Install runtime dependencies
 uv sync

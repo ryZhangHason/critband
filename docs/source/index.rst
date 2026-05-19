@@ -34,8 +34,7 @@ Key features:
   (Müller & Sawitzki 1991)
 - **Multi-format I/O** — :mod:`critband.io` reads numerical data from 9 file formats
   (CSV, TSV, JSON, Markdown, HTML, XLSX, XLS, DOCX, PDF) through a unified API
-- **Web-ready** — runs in-browser via Pyodide (WebAssembly) at
-  https://qhwangantoneva.github.io/critband/
+- **Repository-first distribution** — install from PyPI or inspect the package source directly on GitHub
 
 Quick start:
 

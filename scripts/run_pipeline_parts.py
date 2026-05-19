@@ -6,7 +6,7 @@ Part 3: inject results into .tex, compile PDF
 """
 import subprocess, sys, os, json, time
 
-PROJECT = "/Users/qadz/Downloads/Polarization-CBW"
+PROJECT = "critband"
 TEX_DIR = f"{PROJECT}/02_projects/01_polarization_manuscript/05_writing/arxiv_v1"
 
 def run_fast():

@@ -63,10 +63,10 @@ jupyter = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ryZhangHason/Polarization-CBW"
-"Bug Tracker" = "https://github.com/ryZhangHason/Polarization-CBW/issues"
-Documentation = "https://github.com/ryZhangHason/Polarization-CBW"
-Source = "https://github.com/ryZhangHason/Polarization-CBW"
+Homepage = "https://github.com/ryZhangHason/critband"
+"Bug Tracker" = "https://github.com/ryZhangHason/critband/issues"
+Documentation = "https://github.com/ryZhangHason/critband"
+Source = "https://github.com/ryZhangHason/critband"
 Paper = "https://arxiv.org/abs/2605.18686"
 
 [build-system]

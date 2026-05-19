@@ -104,8 +104,8 @@ pip install critband
 uv add critband
 
 # Development
-git clone https://github.com/ryZhangHason/Polarization-CBW.git
-cd Polarization-CBW
+git clone git@github.com:ryZhangHason/critband.git
+cd critband
 uv sync
 uv run python -m pytest tests/ -v
 ```

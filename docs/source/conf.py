@@ -41,7 +41,7 @@ html_theme = "furo"
 html_static_path = ["_static"]
 html_title = "critband — Critical Bandwidth for Multimodal Distributions"
 html_theme_options = {
-    "source_repository": "https://github.com/ryZhangHason/Polarization-CBW/",
+    "source_repository": "https://github.com/ryZhangHason/critband/",
     "source_branch": "main",
     "source_directory": "docs/source",
 }

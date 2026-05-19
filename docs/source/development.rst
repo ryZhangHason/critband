@@ -10,8 +10,8 @@ Clone the repository and install development dependencies:
 
 .. code-block:: bash
 
-   git clone https://github.com/ryZhangHason/Polarization-CBW.git
-   cd Polarization-CBW
+   git clone git@github.com:ryZhangHason/critband.git
+   cd critband
    uv sync --group dev
 
 
@@ -49,4 +49,4 @@ Building Documentation
 Contributing
 ------------
 
-We welcome contributions! Please see `CONTRIBUTING.md <https://github.com/ryZhangHason/Polarization-CBW/blob/main/CONTRIBUTING.md>`_ on GitHub for guidelines.
+We welcome contributions! Please see `CONTRIBUTING.md <https://github.com/ryZhangHason/critband/blob/main/CONTRIBUTING.md>`_ on GitHub for guidelines.

@@ -10,7 +10,7 @@ authors:
     orcid: https://orcid.org/0000-0000-0000-0000
 version: 0.2.3
 date-released: 2026-05-19
-url: "https://github.com/ryZhangHason/Polarization-CBW"
-repository-code: "https://github.com/ryZhangHason/Polarization-CBW"
+url: "https://github.com/ryZhangHason/critband"
+repository-code: "https://github.com/ryZhangHason/critband"
 abstract: "critband is a Python package for critical bandwidth analysis and multimodality diagnostics in kernel density estimation. The accompanying arXiv paper is available at https://arxiv.org/abs/2605.18686."
 license: Apache-2.0
